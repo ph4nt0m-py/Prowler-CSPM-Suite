@@ -1,0 +1,106 @@
+# Prowler CSPM Suite — local stack.
+# Worker uses Docker socket to run Prowler in sibling containers (Docker-outside-of-Docker).
+#
+# If host port 8000 is already in use (common with other dev servers), run:
+#   API_PORT=8001 docker compose up --build
+# The web image is built with VITE_API_URL matching API_PORT so the SPA calls the right origin.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: prowler
+      POSTGRES_PASSWORD: prowler
+      POSTGRES_DB: cloudaudit
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prowler -d cloudaudit"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.api
+    environment:
+      DATABASE_URL: postgresql+psycopg2://prowler:prowler@postgres:5432/cloudaudit
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-me}
+      SCAN_OUTPUT_DIR: /data/scans
+      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - scan_data:/data/scans
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "alembic upgrade head && python /app/scripts/seed_dev_user.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+  worker:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.worker
+    environment:
+      DATABASE_URL: postgresql+psycopg2://prowler:prowler@postgres:5432/cloudaudit
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-me}
+      SCAN_OUTPUT_DIR: /data/scans
+      DOCKER_AVAILABLE: "true"
+      PROWLER_IMAGE: ${PROWLER_IMAGE:-prowlercloud/prowler:stable}
+      PROWLER_AUTO_PULL: ${PROWLER_AUTO_PULL:-false}
+    volumes:
+      - scan_data:/data/scans
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # Consume cloudaudit (app default) and celery (legacy) so no tasks are stranded after queue fixes.
+    command: celery -A celery_app worker --loglevel=info -Q cloudaudit,celery
+
+  beat:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.worker
+    environment:
+      DATABASE_URL: postgresql+psycopg2://prowler:prowler@postgres:5432/cloudaudit
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-me}
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: celery -A celery_app beat --loglevel=info
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.web
+      args:
+        VITE_API_URL: http://localhost:${API_PORT:-8000}
+    ports:
+      - "${WEB_PORT:-5173}:5173"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  scan_data:
+    name: cloudsecurity_scan_data

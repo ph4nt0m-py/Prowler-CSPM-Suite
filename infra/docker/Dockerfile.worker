@@ -1,0 +1,41 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Official static Docker *client* only (talks to host daemon via mounted socket).
+# The docker.io Debian package often omits /usr/bin/docker in slim/minimal trees; static CLI is reliable.
+ARG DOCKER_STATIC_VERSION=26.1.4
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    ca-certificates \
+    curl \
+    && arch=$(dpkg --print-architecture) \
+    && case "$arch" in \
+         amd64) DARCH=x86_64 ;; \
+         arm64) DARCH=aarch64 ;; \
+         *) echo "unsupported arch: $arch"; exit 1 ;; \
+       esac \
+    && curl -fsSL "https://download.docker.com/linux/static/stable/${DARCH}/docker-${DOCKER_STATIC_VERSION}.tgz" \
+    | tar -xz -C /tmp \
+    && install -m 0755 /tmp/docker/docker /usr/local/bin/docker \
+    && rm -rf /tmp/docker \
+    && /usr/local/bin/docker --version \
+    && apt-get purge -y curl \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY services/api/requirements.txt /app/requirements-api.txt
+COPY services/worker/requirements.txt /app/requirements-worker.txt
+RUN pip install --no-cache-dir -r /app/requirements-api.txt -r /app/requirements-worker.txt
+
+COPY services/api/app /app/app
+COPY services/api/alembic.ini /app/alembic.ini
+COPY services/api/alembic /app/alembic
+COPY services/worker/celery_app.py /app/celery_app.py
+COPY services/worker/tasks /app/tasks
+COPY services/worker/prowler /app/prowler
+
+ENV DOCKER_BIN=/usr/local/bin/docker
+ENV PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
+
+ENV PYTHONPATH=/app
