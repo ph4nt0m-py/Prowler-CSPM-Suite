@@ -36,5 +36,3 @@ The worker container needs access to the **Docker socket** to run Prowler in sib
 Copy [.env.example](.env.example) to `.env` if you want to override compose defaults.
 
 ## License
-
-Proprietary / your organization — set as needed.
