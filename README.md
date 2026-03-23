@@ -15,7 +15,6 @@ Production-oriented monorepo for running **Prowler**-backed cloud security postu
 - **Dashboard** — per-client summary with severity breakdown, service distribution, and diff counts rendered as color-coded badges
 - **Excel export** — one-click download of scan findings as `.xlsx` with triage status included
 - **Audit logging** — server-side audit trail for sensitive actions (client, credential, scan, and triage changes)
-- **Role-based access** — JWT authentication with admin and user roles; admin-only endpoints for Prowler image management
 - **Automated Prowler updates** — scheduled checks for new Prowler releases every 6 hours with optional auto-pull of the latest image
 - **Single-command deployment** — full stack (API, worker, scheduler, database, cache, UI) via `docker compose up --build`
 
