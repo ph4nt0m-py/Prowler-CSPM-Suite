@@ -15,6 +15,7 @@ class DiffItemOut(BaseModel):
     title: str | None = None
     description: str | None = None
     check_description: str | None = None
+    status_detail: str | None = None
     check_id: str | None = None
     remediation: str | None = None
     remediation_url: str | None = None

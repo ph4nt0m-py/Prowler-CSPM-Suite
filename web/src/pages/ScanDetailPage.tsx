@@ -24,6 +24,7 @@ type Finding = {
   title: string | null;
   description: string | null;
   check_description: string | null;
+  status_detail: string | null;
   resource_id: string;
   region: string;
   service: string;
@@ -58,6 +59,7 @@ type DiffItem = {
   title: string | null;
   description: string | null;
   check_description: string | null;
+  status_detail: string | null;
   check_id: string | null;
   remediation: string | null;
   remediation_url: string | null;
@@ -85,6 +87,7 @@ type GroupedFinding = {
   title: string | null;
   description: string | null;
   check_description: string | null;
+  status_detail: string | null;
   severity: string;
   service: string;
   remediation: string | null;
@@ -535,13 +538,15 @@ export default function ScanDetailPage() {
                         </td>
                         <td className="py-2 pr-3 font-mono text-xs text-slate-300">{f.service}</td>
                         <td className="max-w-[14rem] truncate py-2 pr-3 font-mono text-xs text-slate-400">{f.resource_id}</td>
-                        <td className="max-w-md truncate py-2 text-slate-400">{f.title || f.description}</td>
+                        <td className="max-w-md truncate py-2 text-slate-400">{f.status_detail || f.description}</td>
                       </tr>
                       {open && (
                         <tr className="border-b border-slate-900 bg-slate-900/20">
                           <td colSpan={7} className="px-4 py-3">
                             <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 text-xs">
-                              <dt className="text-slate-500">Title</dt>
+                              <dt className="text-slate-500">Finding</dt>
+                              <dd className="text-slate-300">{f.status_detail || "—"}</dd>
+                              <dt className="text-slate-500">Check</dt>
                               <dd className="text-slate-300">{f.title || f.description || "—"}</dd>
                               <dt className="text-slate-500">Description</dt>
                               <dd className="text-slate-300 whitespace-pre-wrap">{f.check_description || "—"}</dd>
@@ -683,7 +688,7 @@ export default function ScanDetailPage() {
                           </span>
                         </td>
                         <td className="py-2 pr-3 font-mono text-xs text-slate-300">{g.service}</td>
-                        <td className="max-w-lg truncate py-2 pr-3 text-slate-400">{g.title || g.description}</td>
+                        <td className="max-w-lg truncate py-2 pr-3 text-slate-400">{g.status_detail || g.title || g.description}</td>
                         <td className="py-2 pr-3 text-right">
                           <span className="inline-block rounded-full bg-slate-800 border border-slate-700 px-2.5 py-0.5 text-xs font-semibold text-slate-200">
                             {g.count}
@@ -695,7 +700,9 @@ export default function ScanDetailPage() {
                           <td colSpan={5} className="px-4 py-3">
                             <div className="mb-2">
                               <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 text-xs">
-                                <dt className="text-slate-500">Title</dt>
+                                <dt className="text-slate-500">Finding</dt>
+                                <dd className="text-slate-300">{g.status_detail || "—"}</dd>
+                                <dt className="text-slate-500">Check</dt>
                                 <dd className="text-slate-300">{g.title || g.description || "—"}</dd>
                                 <dt className="text-slate-500">Description</dt>
                                 <dd className="text-slate-300 whitespace-pre-wrap">{g.check_description || "—"}</dd>
@@ -880,14 +887,16 @@ export default function ScanDetailPage() {
                               </td>
                               <td className="py-2 pr-3 text-xs text-slate-400">{i.triage?.replace(/_/g, " ") ?? "—"}</td>
                               <td className="max-w-md truncate py-2 text-slate-400">
-                                {i.title || i.description || "--"}
+                                {i.status_detail || i.description || "--"}
                               </td>
                             </tr>
                             {open && (
                               <tr className="border-b border-slate-900 bg-slate-900/20">
                                 <td colSpan={7} className="px-4 py-3">
                                   <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 text-xs">
-                                    <dt className="text-slate-500">Title</dt>
+                                    <dt className="text-slate-500">Finding</dt>
+                                    <dd className="text-slate-300">{i.status_detail || "—"}</dd>
+                                    <dt className="text-slate-500">Check</dt>
                                     <dd className="text-slate-300">{i.title || i.description || "—"}</dd>
                                     <dt className="text-slate-500">Description</dt>
                                     <dd className="text-slate-300 whitespace-pre-wrap">{i.check_description || "—"}</dd>

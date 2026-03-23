@@ -20,6 +20,7 @@ class FindingOut(BaseModel):
     title: str | None = None
     description: str | None
     check_description: str | None = None
+    status_detail: str | None = None
     compliance_framework: str | None
     remediation: str | None = None
     remediation_url: str | None = None
@@ -48,6 +49,7 @@ class GroupedFinding(BaseModel):
     title: str | None = None
     description: str | None
     check_description: str | None = None
+    status_detail: str | None = None
     severity: FindingSeverity
     service: str
     remediation: str | None = None
