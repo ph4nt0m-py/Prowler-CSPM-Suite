@@ -37,6 +37,19 @@ const CLOUDS: { id: Cloud; label: string; short: string }[] = [
   { id: "gcp", label: "Google Cloud", short: "GCP" },
 ];
 
+const SEV_CLS: Record<string, string> = {
+  critical: "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/60 dark:text-red-300 dark:border-red-700/50",
+  high: "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/50 dark:text-orange-300 dark:border-orange-700/50",
+  medium: "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/40 dark:text-yellow-300 dark:border-yellow-700/40",
+  low: "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/40 dark:text-sky-300 dark:border-sky-700/40",
+};
+
+const DIFF_CLS: Record<string, string> = {
+  new: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-300 dark:border-emerald-700/50",
+  open: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/50 dark:text-amber-300 dark:border-amber-700/50",
+  closed: "bg-surface-alt text-content-muted border-edge",
+};
+
 export default function ClientDetailPage() {
   const { clientId } = useParams<{ clientId: string }>();
   const nav = useNavigate();
@@ -203,27 +216,27 @@ export default function ClientDetailPage() {
   if (!clientId) return null;
 
   return (
-    <div className="mx-auto max-w-4xl p-6">
-      <Link to="/" className="text-sm text-emerald-400 hover:underline">
+    <div className="mx-auto max-w-4xl px-4 py-6 lg:max-w-5xl xl:max-w-6xl sm:px-6">
+      <Link to="/" className="text-sm text-emerald-600 hover:underline dark:text-emerald-400">
         ← Clients
       </Link>
       {client.data && (
         <header className="mt-4 mb-6 flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold">{client.data.name}</h1>
-            {client.data.description && <p className="text-slate-400">{client.data.description}</p>}
+            {client.data.description && <p className="text-content-muted">{client.data.description}</p>}
           </div>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              className="rounded-lg border border-slate-600 px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-800"
+              className="rounded-lg border border-edge px-3 py-1.5 text-sm text-content hover:bg-surface-alt"
               onClick={openEditClient}
             >
               Edit client
             </button>
             <button
               type="button"
-              className="rounded-lg border border-red-900/60 px-3 py-1.5 text-sm text-red-400 hover:bg-red-950/40"
+              className="rounded-lg border border-red-200 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:border-red-900/60 dark:text-red-400 dark:hover:bg-red-950/40"
               onClick={() => setDeleteClientOpen(true)}
             >
               Delete client
@@ -232,27 +245,21 @@ export default function ClientDetailPage() {
         </header>
       )}
 
-      <section className="mb-8 rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+      <section className="mb-8 rounded-xl border border-edge-soft bg-surface/40 p-4">
         <h2 className="mb-3 text-lg font-medium">Dashboard</h2>
         {dashboard.data && (
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-lg border border-slate-800 p-3">
-              <div className="text-xs uppercase text-slate-500">Total findings</div>
+            <div className="rounded-lg border border-edge-soft p-3">
+              <div className="text-xs uppercase text-content-faint">Total findings</div>
               <div className="text-2xl font-semibold">{dashboard.data.total_findings}</div>
             </div>
-            <div className="rounded-lg border border-slate-800 p-3">
-              <div className="mb-2 text-xs uppercase text-slate-500">By severity</div>
+            <div className="rounded-lg border border-edge-soft p-3">
+              <div className="mb-2 text-xs uppercase text-content-faint">By severity</div>
               <div className="flex flex-wrap gap-2">
                 {(["critical", "high", "medium", "low"] as const).map((sev) => {
                   const n = dashboard.data!.by_severity[sev] ?? 0;
-                  const cls: Record<string, string> = {
-                    critical: "bg-red-900/60 text-red-300 border-red-700/50",
-                    high: "bg-orange-900/50 text-orange-300 border-orange-700/50",
-                    medium: "bg-yellow-900/40 text-yellow-300 border-yellow-700/40",
-                    low: "bg-sky-900/40 text-sky-300 border-sky-700/40",
-                  };
                   return (
-                    <span key={sev} className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${cls[sev]}`}>
+                    <span key={sev} className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${SEV_CLS[sev]}`}>
                       {sev} <span className="font-semibold">{n}</span>
                     </span>
                   );
@@ -260,21 +267,14 @@ export default function ClientDetailPage() {
               </div>
             </div>
             {dashboard.data.diff_counts && (
-              <div className="rounded-lg border border-slate-800 p-3 sm:col-span-2">
-                <div className="mb-2 text-xs uppercase text-slate-500">Diff (latest scan)</div>
+              <div className="rounded-lg border border-edge-soft p-3 sm:col-span-2">
+                <div className="mb-2 text-xs uppercase text-content-faint">Diff (latest scan)</div>
                 <div className="flex flex-wrap gap-2">
-                  {Object.entries(dashboard.data.diff_counts).map(([cat, n]) => {
-                    const cls: Record<string, string> = {
-                      new: "bg-emerald-900/50 text-emerald-300 border-emerald-700/50",
-                      open: "bg-amber-900/50 text-amber-300 border-amber-700/50",
-                      closed: "bg-slate-800 text-slate-400 border-slate-700",
-                    };
-                    return (
-                      <span key={cat} className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${cls[cat] ?? "text-slate-300"}`}>
-                        {cat} <span className="font-semibold">{n}</span>
-                      </span>
-                    );
-                  })}
+                  {Object.entries(dashboard.data.diff_counts).map(([cat, n]) => (
+                    <span key={cat} className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${DIFF_CLS[cat] ?? "text-content-secondary"}`}>
+                      {cat} <span className="font-semibold">{n}</span>
+                    </span>
+                  ))}
                 </div>
               </div>
             )}
@@ -282,11 +282,11 @@ export default function ClientDetailPage() {
         )}
       </section>
 
-      <section className="mb-8 rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+      <section className="mb-8 rounded-xl border border-edge-soft bg-surface/40 p-4">
         <h2 className="mb-1 text-lg font-medium">Cloud credentials</h2>
-        <p className="mb-4 text-sm text-slate-500">
+        <p className="mb-4 text-sm text-content-faint">
           Choose a provider, then enter secrets. They are encrypted on the server. Prowler scans in this build run on{" "}
-          <span className="text-slate-300">AWS credentials only</span>; Azure and GCP entries are stored for upcoming
+          <span className="text-content-secondary">AWS credentials only</span>; Azure and GCP entries are stored for upcoming
           scan support and workflows.
         </p>
 
@@ -299,18 +299,18 @@ export default function ClientDetailPage() {
               className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
                 cloud === c.id
                   ? "bg-emerald-600 text-white"
-                  : "border border-slate-700 bg-slate-950 text-slate-300 hover:border-slate-500"
+                  : "border border-edge bg-field text-content-secondary hover:border-content-faint"
               }`}
             >
               {c.short}
             </button>
           ))}
         </div>
-        <p className="mb-4 text-xs text-slate-500">{CLOUDS.find((c) => c.id === cloud)?.label}</p>
+        <p className="mb-4 text-xs text-content-faint">{CLOUDS.find((c) => c.id === cloud)?.label}</p>
 
         <div className="grid gap-3">
           <input
-            className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
+            className="rounded-lg border border-edge bg-field px-3 py-2 text-sm text-content"
             placeholder="Credential label (e.g. prod, staging)"
             value={credLabel}
             onChange={(e) => setCredLabel(e.target.value)}
@@ -319,14 +319,14 @@ export default function ClientDetailPage() {
           {cloud === "aws" && (
             <>
               <input
-                className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
+                className="rounded-lg border border-edge bg-field px-3 py-2 text-sm text-content"
                 placeholder="AWS access key ID"
                 value={ak}
                 onChange={(e) => setAk(e.target.value)}
                 autoComplete="off"
               />
               <input
-                className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
+                className="rounded-lg border border-edge bg-field px-3 py-2 text-sm text-content"
                 placeholder="AWS secret access key"
                 type="password"
                 value={sk}
@@ -339,19 +339,19 @@ export default function ClientDetailPage() {
           {cloud === "azure" && (
             <>
               <input
-                className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
+                className="rounded-lg border border-edge bg-field px-3 py-2 text-sm text-content"
                 placeholder="Directory (tenant) ID"
                 value={azureTenant}
                 onChange={(e) => setAzureTenant(e.target.value)}
               />
               <input
-                className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
+                className="rounded-lg border border-edge bg-field px-3 py-2 text-sm text-content"
                 placeholder="Application (client) ID"
                 value={azureClientId}
                 onChange={(e) => setAzureClientId(e.target.value)}
               />
               <input
-                className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
+                className="rounded-lg border border-edge bg-field px-3 py-2 text-sm text-content"
                 placeholder="Client secret"
                 type="password"
                 value={azureSecret}
@@ -362,7 +362,7 @@ export default function ClientDetailPage() {
 
           {cloud === "gcp" && (
             <textarea
-              className="min-h-[160px] w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs"
+              className="min-h-[160px] w-full rounded-lg border border-edge bg-field px-3 py-2 font-mono text-xs text-content"
               placeholder='Paste service account JSON (e.g. { "type": "service_account", "project_id": "..." })'
               value={gcpJson}
               onChange={(e) => setGcpJson(e.target.value)}
@@ -382,19 +382,19 @@ export default function ClientDetailPage() {
           {creds.data?.map((c) => (
             <li
               key={c.id}
-              className="flex items-center justify-between gap-2 rounded border border-slate-800 px-3 py-2"
+              className="flex items-center justify-between gap-2 rounded border border-edge-soft px-3 py-2"
             >
               <span>
-                <span className="mr-2 rounded bg-slate-800 px-1.5 py-0.5 text-xs uppercase text-emerald-300">
+                <span className="mr-2 rounded bg-surface-alt px-1.5 py-0.5 text-xs uppercase text-emerald-600 dark:text-emerald-300">
                   {c.provider}
                 </span>
                 {c.label} · {c.auth_method}
               </span>
               <div className="flex items-center gap-2">
-                <span className="hidden font-mono text-xs text-slate-500 sm:inline">{c.id.slice(0, 8)}…</span>
+                <span className="hidden font-mono text-xs text-content-faint sm:inline">{c.id.slice(0, 8)}…</span>
                 <button
                   type="button"
-                  className="rounded px-2 py-1 text-xs text-red-400 hover:bg-red-950/40"
+                  className="rounded px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
                   onClick={() => {
                     if (window.confirm("Remove this credential?")) deleteCred.mutate(c.id);
                   }}
@@ -407,17 +407,17 @@ export default function ClientDetailPage() {
         </ul>
       </section>
 
-      <section className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+      <section className="rounded-xl border border-edge-soft bg-surface/40 p-4">
         <h2 className="mb-3 text-lg font-medium">Start audit</h2>
-        <p className="mb-3 text-sm text-slate-500">
-          Prowler execution is wired for <strong className="text-slate-300">AWS</strong> today. Pick an AWS credential
+        <p className="mb-3 text-sm text-content-faint">
+          Prowler execution is wired for <strong className="text-content-secondary">AWS</strong> today. Pick an AWS credential
           below; Azure/GCP credentials cannot start a scan until the worker adds those providers.
         </p>
         <div className="grid gap-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-400">Credential</label>
+            <label className="mb-1 block text-xs font-medium text-content-muted">Credential</label>
             <select
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-edge bg-field px-3 py-2 text-sm text-content"
               value={credId}
               onChange={(e) => setCredId(e.target.value)}
             >
@@ -429,25 +429,25 @@ export default function ClientDetailPage() {
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-content-faint">
               Values are the saved credential IDs. AWS entries can run Prowler; others are disabled.
             </p>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-400">Scan label</label>
+            <label className="mb-1 block text-xs font-medium text-content-muted">Scan label</label>
             <input
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-edge bg-field px-3 py-2 text-sm text-content"
               placeholder="e.g. Initial scan"
               value={scanLabel}
               onChange={(e) => setScanLabel(e.target.value)}
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-400">
+            <label className="mb-1 block text-xs font-medium text-content-muted">
               Compare to previous scan (optional)
             </label>
             <select
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-edge bg-field px-3 py-2 text-sm text-content"
               value={prevScanId}
               onChange={(e) => setPrevScanId(e.target.value)}
             >
@@ -461,7 +461,7 @@ export default function ClientDetailPage() {
           </div>
         </div>
         {scanAwsOnly && (
-          <p className="mt-2 text-sm text-amber-400">Selected credential is not AWS — scan will fail. Choose an aws credential.</p>
+          <p className="mt-2 text-sm text-amber-600 dark:text-amber-400">Selected credential is not AWS — scan will fail. Choose an aws credential.</p>
         )}
         <button
           type="button"
@@ -474,34 +474,34 @@ export default function ClientDetailPage() {
         <ul className="mt-6 space-y-2 text-sm">
           {scans.data?.map((s) => (
             <li key={s.id}>
-              <Link className="text-sky-400 hover:underline" to={`/scans/${s.id}`}>
+              <Link className="text-sky-600 hover:underline dark:text-sky-400" to={`/scans/${s.id}`}>
                 {s.label || "Scan"} ·{" "}
-                <span className={s.status === "cancelled" ? "text-amber-400/90" : ""}>{s.status}</span> ·{" "}
+                <span className={s.status === "cancelled" ? "text-amber-600 dark:text-amber-400/90" : ""}>{s.status}</span> ·{" "}
                 {s.progress_pct}%
               </Link>
-              <span className="ml-2 font-mono text-xs text-slate-500">{s.id}</span>
+              <span className="ml-2 font-mono text-xs text-content-faint">{s.id}</span>
             </li>
           ))}
         </ul>
       </section>
 
       {editClientOpen && client.data && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/60 p-4">
+          <div className="w-full max-w-md rounded-xl border border-edge bg-surface p-6 shadow-xl">
             <h2 className="text-lg font-semibold">Edit client</h2>
             <div className="mt-4 space-y-3">
               <div>
-                <label className="text-xs text-slate-400">Name</label>
+                <label className="text-xs text-content-muted">Name</label>
                 <input
-                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-lg border border-edge bg-field px-3 py-2 text-sm text-content"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                 />
               </div>
               <div>
-                <label className="text-xs text-slate-400">Description</label>
+                <label className="text-xs text-content-muted">Description</label>
                 <input
-                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-lg border border-edge bg-field px-3 py-2 text-sm text-content"
                   value={editDesc}
                   onChange={(e) => setEditDesc(e.target.value)}
                 />
@@ -510,7 +510,7 @@ export default function ClientDetailPage() {
             <div className="mt-6 flex justify-end gap-2">
               <button
                 type="button"
-                className="rounded-lg px-4 py-2 text-sm text-slate-400 hover:text-white"
+                className="rounded-lg px-4 py-2 text-sm text-content-muted hover:text-content"
                 onClick={() => setEditClientOpen(false)}
               >
                 Cancel
@@ -531,14 +531,14 @@ export default function ClientDetailPage() {
       )}
 
       {deleteClientOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/60 p-4">
+          <div className="w-full max-w-md rounded-xl border border-edge bg-surface p-6 shadow-xl">
             <h2 className="text-lg font-semibold">Delete this client?</h2>
-            <p className="mt-2 text-sm text-slate-400">All credentials and scans for this client will be removed.</p>
+            <p className="mt-2 text-sm text-content-muted">All credentials and scans for this client will be removed.</p>
             <div className="mt-6 flex justify-end gap-2">
               <button
                 type="button"
-                className="rounded-lg px-4 py-2 text-sm text-slate-400 hover:text-white"
+                className="rounded-lg px-4 py-2 text-sm text-content-muted hover:text-content"
                 onClick={() => setDeleteClientOpen(false)}
               >
                 Cancel

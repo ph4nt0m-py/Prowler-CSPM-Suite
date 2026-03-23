@@ -2,6 +2,41 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  margin: 0;
+@layer base {
+  :root {
+    --c-page: 248 250 252;
+    --c-surface: 255 255 255;
+    --c-surface-alt: 241 245 249;
+    --c-field: 255 255 255;
+    --c-edge: 226 232 240;
+    --c-edge-soft: 226 232 240;
+    --c-edge-row: 241 245 249;
+    --c-content: 15 23 42;
+    --c-content-secondary: 71 85 105;
+    --c-content-muted: 100 116 139;
+    --c-content-faint: 148 163 184;
+    --c-overlay: 0 0 0;
+  }
+
+  .dark {
+    --c-page: 2 6 23;
+    --c-surface: 15 23 42;
+    --c-surface-alt: 30 41 59;
+    --c-field: 2 6 23;
+    --c-edge: 51 65 85;
+    --c-edge-soft: 30 41 59;
+    --c-edge-row: 15 23 42;
+    --c-content: 241 245 249;
+    --c-content-secondary: 203 213 225;
+    --c-content-muted: 148 163 184;
+    --c-content-faint: 100 116 139;
+    --c-overlay: 0 0 0;
+  }
+
+  body {
+    margin: 0;
+    background-color: rgb(var(--c-page));
+    color: rgb(var(--c-content));
+    transition: background-color 0.2s, color 0.2s;
+  }
 }

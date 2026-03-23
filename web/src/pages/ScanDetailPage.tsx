@@ -41,10 +41,10 @@ type PaginatedFindings = {
 };
 
 const SEV_BADGE: Record<string, string> = {
-  critical: "bg-red-900/60 text-red-300 border-red-700/50",
-  high: "bg-orange-900/50 text-orange-300 border-orange-700/50",
-  medium: "bg-yellow-900/40 text-yellow-300 border-yellow-700/40",
-  low: "bg-sky-900/40 text-sky-300 border-sky-700/40",
+  critical: "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/60 dark:text-red-300 dark:border-red-700/50",
+  high: "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/50 dark:text-orange-300 dark:border-orange-700/50",
+  medium: "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/40 dark:text-yellow-300 dark:border-yellow-700/40",
+  low: "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/40 dark:text-sky-300 dark:border-sky-700/40",
 };
 
 const PAGE_SIZE = 50;
@@ -102,9 +102,9 @@ type PaginatedGroupedFindings = {
 };
 
 const DIFF_BADGE: Record<string, string> = {
-  new: "bg-emerald-900/50 text-emerald-300 border-emerald-700/50",
-  open: "bg-amber-900/50 text-amber-300 border-amber-700/50",
-  closed: "bg-slate-800 text-slate-400 border-slate-700",
+  new: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-300 dark:border-emerald-700/50",
+  open: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/50 dark:text-amber-300 dark:border-amber-700/50",
+  closed: "bg-surface-alt text-content-muted border-edge",
 };
 
 export default function ScanDetailPage() {
@@ -281,7 +281,6 @@ export default function ScanDetailPage() {
         if (typeof p.stage === "string") setWsStage(p.stage);
         if (typeof p.checks_done === "number" && typeof p.checks_total === "number")
           setWsChecks({ done: p.checks_done, total: p.checks_total });
-        // Scan row is marked ``completed`` before parse_findings runs; refresh findings when ingest catches up.
         if (p.stage === "diff" || p.stage === "completed") {
           qc.invalidateQueries({ queryKey: ["findings", scanId] });
           qc.invalidateQueries({ queryKey: ["findingServices", scanId] });
@@ -306,42 +305,42 @@ export default function ScanDetailPage() {
   const stageLabel = wsStage;
 
   return (
-    <div className="mx-auto max-w-7xl p-6">
-      <Link to={`/clients/${scan.data?.client_id ?? ""}`} className="text-sm text-emerald-400 hover:underline">
+    <div className="mx-auto w-full max-w-screen-2xl px-4 py-6 sm:px-6 lg:px-8">
+      <Link to={`/clients/${scan.data?.client_id ?? ""}`} className="text-sm text-emerald-600 hover:underline dark:text-emerald-400">
         ← Client
       </Link>
       {scan.data && (
         <header className="mt-4 space-y-2">
           <h1 className="text-2xl font-semibold">Scan</h1>
-          <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
-            <span className="rounded-full border border-slate-700 px-2 py-0.5 font-mono text-xs">{scan.data.status}</span>
+          <div className="flex flex-wrap items-center gap-3 text-sm text-content-muted">
+            <span className="rounded-full border border-edge px-2 py-0.5 font-mono text-xs">{scan.data.status}</span>
             <div className="flex items-center gap-2">
-              <div className="h-2 w-28 overflow-hidden rounded-full bg-slate-700">
+              <div className="h-2 w-28 overflow-hidden rounded-full bg-surface-alt">
                 <div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{ width: `${pct}%` }} />
               </div>
               <span className="font-mono text-xs">{pct}%</span>
             </div>
             {stageLabel && (
-              <span className="rounded-full border border-slate-600 px-2 py-0.5 font-mono text-xs text-slate-300">
+              <span className="rounded-full border border-edge px-2 py-0.5 font-mono text-xs text-content-secondary">
                 {stageLabel.replace(/_/g, " ")}
                 {wsChecks && stageLabel === "running_prowler" ? ` (${wsChecks.done}/${wsChecks.total})` : ""}
               </span>
             )}
-            {scan.data.error_message && <span className="text-red-400">{scan.data.error_message}</span>}
+            {scan.data.error_message && <span className="text-red-600 dark:text-red-400">{scan.data.error_message}</span>}
             {scan.data.status === "completed" && typeof scan.data.findings_count === "number" && (
-              <span className="text-slate-500">Findings in DB: {scan.data.findings_count}</span>
+              <span className="text-content-faint">Findings in DB: {scan.data.findings_count}</span>
             )}
           </div>
           <div className="flex flex-wrap items-end gap-2">
             <input
-              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
+              className="rounded-lg border border-edge bg-field px-3 py-2 text-sm text-content"
               value={labelEdit}
               onChange={(e) => setLabelEdit(e.target.value)}
               placeholder="Scan label"
             />
             <button
               type="button"
-              className="rounded-lg bg-slate-700 px-3 py-2 text-sm"
+              className="rounded-lg bg-surface-alt px-3 py-2 text-sm text-content"
               onClick={() => patchLabel.mutate(labelEdit)}
             >
               Save label
@@ -349,7 +348,7 @@ export default function ScanDetailPage() {
             {(scan.data.status === "pending" || scan.data.status === "running") && (
               <button
                 type="button"
-                className="rounded-lg border border-amber-700/60 bg-amber-950/40 px-3 py-2 text-sm text-amber-200 hover:bg-amber-950/70 disabled:opacity-50"
+                className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-700 hover:bg-amber-100 disabled:opacity-50 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200 dark:hover:bg-amber-950/70"
                 disabled={cancelScan.isPending}
                 onClick={() => cancelScan.mutate()}
               >
@@ -357,12 +356,12 @@ export default function ScanDetailPage() {
               </button>
             )}
             {cancelScan.isError && (
-              <span className="text-sm text-red-400">{cancelScan.error.message}</span>
+              <span className="text-sm text-red-600 dark:text-red-400">{cancelScan.error.message}</span>
             )}
             {scan.data.status === "completed" && (
               <button
                 type="button"
-                className="rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800 disabled:opacity-50"
+                className="rounded-lg border border-edge bg-surface px-3 py-2 text-sm text-content hover:bg-surface-alt disabled:opacity-50"
                 disabled={reparseFindings.isPending}
                 onClick={() => reparseFindings.mutate()}
               >
@@ -370,7 +369,7 @@ export default function ScanDetailPage() {
               </button>
             )}
             {reparseFindings.isError && (
-              <span className="text-sm text-red-400">{reparseFindings.error.message}</span>
+              <span className="text-sm text-red-600 dark:text-red-400">{reparseFindings.error.message}</span>
             )}
             <a
               className="rounded-lg bg-emerald-700 px-3 py-2 text-sm text-white"
@@ -398,31 +397,31 @@ export default function ScanDetailPage() {
         </header>
       )}
 
-      <div className="mt-6 flex gap-2 border-b border-slate-800 pb-2">
+      <div className="mt-6 flex gap-2 border-b border-edge-soft pb-2">
         <button
           type="button"
-          className={`rounded-lg px-3 py-1 text-sm ${tab === "findings" ? "bg-slate-800" : "text-slate-400"}`}
+          className={`rounded-lg px-3 py-1 text-sm ${tab === "findings" ? "bg-surface-alt text-content" : "text-content-muted"}`}
           onClick={() => setTab("findings")}
         >
           Findings
         </button>
         <button
           type="button"
-          className={`rounded-lg px-3 py-1 text-sm ${tab === "issues" ? "bg-slate-800" : "text-slate-400"}`}
+          className={`rounded-lg px-3 py-1 text-sm ${tab === "issues" ? "bg-surface-alt text-content" : "text-content-muted"}`}
           onClick={() => setTab("issues")}
         >
           Issues
         </button>
         <button
           type="button"
-          className={`rounded-lg px-3 py-1 text-sm ${tab === "diff" ? "bg-slate-800" : "text-slate-400"}`}
+          className={`rounded-lg px-3 py-1 text-sm ${tab === "diff" ? "bg-surface-alt text-content" : "text-content-muted"}`}
           onClick={() => setTab("diff")}
         >
           Diff
         </button>
         <button
           type="button"
-          className={`rounded-lg px-3 py-1 text-sm ${tab === "logs" ? "bg-slate-800" : "text-slate-400"}`}
+          className={`rounded-lg px-3 py-1 text-sm ${tab === "logs" ? "bg-surface-alt text-content" : "text-content-muted"}`}
           onClick={() => setTab("logs")}
         >
           Logs
@@ -431,10 +430,9 @@ export default function ScanDetailPage() {
 
       {tab === "findings" && (
         <div className="mt-4">
-          {/* Filter bar */}
           <div className="mb-4 flex flex-wrap items-center gap-3">
             <select
-              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-200"
+              className="rounded-lg border border-edge bg-field px-3 py-1.5 text-sm text-content"
               value={fSeverity}
               onChange={(e) => { setFSeverity(e.target.value); setPage(0); }}
             >
@@ -445,7 +443,7 @@ export default function ScanDetailPage() {
               <option value="low">Low</option>
             </select>
             <select
-              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-200"
+              className="rounded-lg border border-edge bg-field px-3 py-1.5 text-sm text-content"
               value={fStatus}
               onChange={(e) => { setFStatus(e.target.value); setPage(0); }}
             >
@@ -455,7 +453,7 @@ export default function ScanDetailPage() {
               <option value="closed">Closed</option>
             </select>
             <select
-              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-200"
+              className="rounded-lg border border-edge bg-field px-3 py-1.5 text-sm text-content"
               value={fTriage}
               onChange={(e) => { setFTriage(e.target.value); setPage(0); }}
             >
@@ -466,7 +464,7 @@ export default function ScanDetailPage() {
               <option value="not_applicable">N/A</option>
             </select>
             <select
-              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-200"
+              className="rounded-lg border border-edge bg-field px-3 py-1.5 text-sm text-content"
               value={fService}
               onChange={(e) => { setFService(e.target.value); setPage(0); }}
             >
@@ -478,31 +476,30 @@ export default function ScanDetailPage() {
             <input
               type="text"
               placeholder="Search findings..."
-              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-200 placeholder-slate-500 w-48"
+              className="w-40 rounded-lg border border-edge bg-field px-3 py-1.5 text-sm text-content placeholder-content-faint sm:w-48"
               value={fSearch}
               onChange={(e) => { setFSearch(e.target.value); setPage(0); }}
             />
             {(fSeverity || fStatus || fTriage || fService || fSearch) && (
               <button
                 type="button"
-                className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm text-slate-400 hover:text-slate-200"
+                className="rounded-lg border border-edge px-3 py-1.5 text-sm text-content-muted hover:text-content"
                 onClick={() => { setFSeverity(""); setFStatus(""); setFTriage(""); setFService(""); setFSearch(""); setPage(0); }}
               >
                 Clear filters
               </button>
             )}
             {findings.data && (
-              <span className="ml-auto text-xs text-slate-500">
+              <span className="ml-auto text-xs text-content-faint">
                 {findings.data.total} finding{findings.data.total !== 1 ? "s" : ""}
               </span>
             )}
           </div>
 
-          {/* Table */}
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-800 text-slate-400">
+                <tr className="border-b border-edge-soft text-content-muted">
                   <th className="w-6 py-2" />
                   <th className="py-2 pr-3">Severity</th>
                   <th className="py-2 pr-3">Status</th>
@@ -518,23 +515,23 @@ export default function ScanDetailPage() {
                   return (
                     <Fragment key={f.id}>
                       <tr
-                        className="border-b border-slate-900 hover:bg-slate-900/40 cursor-pointer"
+                        className="border-b border-edge-row hover:bg-surface/40 cursor-pointer"
                         onClick={() => setExpandedId(open ? null : f.id)}
                       >
-                        <td className="py-2 pl-1 pr-1 text-slate-500">
+                        <td className="py-2 pl-1 pr-1 text-content-faint">
                           <svg className={`h-4 w-4 transition-transform ${open ? "rotate-90" : ""}`} viewBox="0 0 20 20" fill="currentColor">
                             <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
                           </svg>
                         </td>
                         <td className="py-2 pr-3">
-                          <span className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${SEV_BADGE[f.severity] ?? "text-slate-300"}`}>
+                          <span className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${SEV_BADGE[f.severity] ?? "text-content-secondary"}`}>
                             {f.severity}
                           </span>
                         </td>
-                        <td className="py-2 pr-3 text-slate-300">{f.status}</td>
+                        <td className="py-2 pr-3 text-content-secondary">{f.status}</td>
                         <td className="py-2 pr-3" onClick={(e) => e.stopPropagation()}>
                           <select
-                            className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs"
+                            className="rounded border border-edge bg-field px-2 py-1 text-xs text-content"
                             value={f.triage ?? ""}
                             onChange={(e) => {
                               const v = e.target.value;
@@ -548,42 +545,42 @@ export default function ScanDetailPage() {
                             <option value="not_applicable">N/A</option>
                           </select>
                         </td>
-                        <td className="py-2 pr-3 font-mono text-xs text-slate-300">{f.service}</td>
-                        <td className="max-w-[14rem] truncate py-2 pr-3 font-mono text-xs text-slate-400">{f.resource_id}</td>
-                        <td className="max-w-md truncate py-2 text-slate-400">{f.status_detail || f.description}</td>
+                        <td className="py-2 pr-3 font-mono text-xs text-content-secondary">{f.service}</td>
+                        <td className="max-w-[14rem] truncate py-2 pr-3 font-mono text-xs text-content-muted">{f.resource_id}</td>
+                        <td className="max-w-md truncate py-2 text-content-muted">{f.status_detail || f.description}</td>
                       </tr>
                       {open && (
-                        <tr className="border-b border-slate-900 bg-slate-900/20">
+                        <tr className="border-b border-edge-row bg-surface/10">
                           <td colSpan={7} className="px-4 py-3">
                             <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 text-xs">
-                              <dt className="text-slate-500">Finding</dt>
-                              <dd className="text-slate-300">{f.status_detail || "—"}</dd>
-                              <dt className="text-slate-500">Check</dt>
-                              <dd className="text-slate-300">{f.title || f.description || "—"}</dd>
-                              <dt className="text-slate-500">Description</dt>
-                              <dd className="text-slate-300 whitespace-pre-wrap">{f.check_description || "—"}</dd>
-                              <dt className="text-slate-500">Resource</dt>
-                              <dd className="font-mono text-slate-300 break-all">{f.resource_id}</dd>
-                              <dt className="text-slate-500">Check ID</dt>
-                              <dd className="font-mono text-slate-300">{f.check_id}</dd>
-                              <dt className="text-slate-500">Region</dt>
-                              <dd className="text-slate-300">{f.region || "—"}</dd>
-                              <dt className="text-slate-500">Compliance</dt>
-                              <dd className="text-slate-300">{f.compliance_framework || "—"}</dd>
-                              <dt className="text-slate-500">Remediation</dt>
-                              <dd className="text-slate-300 whitespace-pre-wrap">
+                              <dt className="text-content-faint">Finding</dt>
+                              <dd className="text-content-secondary">{f.status_detail || "—"}</dd>
+                              <dt className="text-content-faint">Check</dt>
+                              <dd className="text-content-secondary">{f.title || f.description || "—"}</dd>
+                              <dt className="text-content-faint">Description</dt>
+                              <dd className="text-content-secondary whitespace-pre-wrap">{f.check_description || "—"}</dd>
+                              <dt className="text-content-faint">Resource</dt>
+                              <dd className="font-mono text-content-secondary break-all">{f.resource_id}</dd>
+                              <dt className="text-content-faint">Check ID</dt>
+                              <dd className="font-mono text-content-secondary">{f.check_id}</dd>
+                              <dt className="text-content-faint">Region</dt>
+                              <dd className="text-content-secondary">{f.region || "—"}</dd>
+                              <dt className="text-content-faint">Compliance</dt>
+                              <dd className="text-content-secondary">{f.compliance_framework || "—"}</dd>
+                              <dt className="text-content-faint">Remediation</dt>
+                              <dd className="text-content-secondary whitespace-pre-wrap">
                                 {f.remediation?.replace(/\*\*/g, "") || "—"}
                                 {f.remediation_url && (
                                   <>
                                     {" "}
-                                    <a href={f.remediation_url} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:underline">
+                                    <a href={f.remediation_url} target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline dark:text-emerald-400">
                                       Reference
                                     </a>
                                   </>
                                 )}
                               </dd>
-                              <dt className="text-slate-500">Fingerprint</dt>
-                              <dd className="font-mono text-slate-400">{f.fingerprint}</dd>
+                              <dt className="text-content-faint">Fingerprint</dt>
+                              <dd className="font-mono text-content-muted">{f.fingerprint}</dd>
                             </dl>
                           </td>
                         </tr>
@@ -595,23 +592,22 @@ export default function ScanDetailPage() {
             </table>
           </div>
 
-          {/* Pagination */}
           {findings.data && findings.data.total > PAGE_SIZE && (
             <div className="mt-4 flex items-center justify-between text-sm">
               <button
                 type="button"
-                className="rounded-lg border border-slate-700 px-3 py-1.5 text-slate-300 hover:bg-slate-800 disabled:opacity-40"
+                className="rounded-lg border border-edge px-3 py-1.5 text-content-secondary hover:bg-surface-alt disabled:opacity-40"
                 disabled={page === 0}
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
               >
                 Previous
               </button>
-              <span className="text-slate-500">
+              <span className="text-content-faint">
                 Page {page + 1} of {Math.ceil(findings.data.total / PAGE_SIZE)}
               </span>
               <button
                 type="button"
-                className="rounded-lg border border-slate-700 px-3 py-1.5 text-slate-300 hover:bg-slate-800 disabled:opacity-40"
+                className="rounded-lg border border-edge px-3 py-1.5 text-content-secondary hover:bg-surface-alt disabled:opacity-40"
                 disabled={(page + 1) * PAGE_SIZE >= findings.data.total}
                 onClick={() => setPage((p) => p + 1)}
               >
@@ -621,10 +617,10 @@ export default function ScanDetailPage() {
           )}
 
           {scan.data?.status === "cancelled" && (
-            <p className="mt-4 text-slate-500">This scan was cancelled; there are no findings.</p>
+            <p className="mt-4 text-content-faint">This scan was cancelled; there are no findings.</p>
           )}
           {scan.data?.status !== "completed" && scan.data?.status !== "cancelled" && (
-            <p className="mt-4 text-slate-500">Findings appear when the scan completes.</p>
+            <p className="mt-4 text-content-faint">Findings appear when the scan completes.</p>
           )}
         </div>
       )}
@@ -633,7 +629,7 @@ export default function ScanDetailPage() {
         <div className="mt-4">
           <div className="mb-4 flex flex-wrap items-center gap-3">
             <select
-              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-200"
+              className="rounded-lg border border-edge bg-field px-3 py-1.5 text-sm text-content"
               value={issueSeverity}
               onChange={(e) => { setIssueSeverity(e.target.value); setIssuesPage(0); }}
             >
@@ -644,7 +640,7 @@ export default function ScanDetailPage() {
               <option value="low">Low</option>
             </select>
             <select
-              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-200"
+              className="rounded-lg border border-edge bg-field px-3 py-1.5 text-sm text-content"
               value={issueService}
               onChange={(e) => { setIssueService(e.target.value); setIssuesPage(0); }}
             >
@@ -656,21 +652,21 @@ export default function ScanDetailPage() {
             <input
               type="text"
               placeholder="Search issues..."
-              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-200 placeholder-slate-500 w-48"
+              className="w-40 rounded-lg border border-edge bg-field px-3 py-1.5 text-sm text-content placeholder-content-faint sm:w-48"
               value={issueSearch}
               onChange={(e) => { setIssueSearch(e.target.value); setIssuesPage(0); }}
             />
             {(issueSeverity || issueService || issueSearch) && (
               <button
                 type="button"
-                className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm text-slate-400 hover:text-slate-200"
+                className="rounded-lg border border-edge px-3 py-1.5 text-sm text-content-muted hover:text-content"
                 onClick={() => { setIssueSeverity(""); setIssueService(""); setIssueSearch(""); setIssuesPage(0); }}
               >
                 Clear filters
               </button>
             )}
             {groupedFindings.data && (
-              <span className="ml-auto text-xs text-slate-500">
+              <span className="ml-auto text-xs text-content-faint">
                 {groupedFindings.data.total_groups} issue type{groupedFindings.data.total_groups !== 1 ? "s" : ""}
               </span>
             )}
@@ -679,7 +675,7 @@ export default function ScanDetailPage() {
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-800 text-slate-400">
+                <tr className="border-b border-edge-soft text-content-muted">
                   <th className="w-6 py-2" />
                   <th className="py-2 pr-3">Severity</th>
                   <th className="py-2 pr-3">Service</th>
@@ -693,47 +689,47 @@ export default function ScanDetailPage() {
                   return (
                     <Fragment key={g.check_id}>
                       <tr
-                        className="border-b border-slate-900 hover:bg-slate-900/40 cursor-pointer"
+                        className="border-b border-edge-row hover:bg-surface/40 cursor-pointer"
                         onClick={() => setExpandedCheckId(open ? null : g.check_id)}
                       >
-                        <td className="py-2 pl-1 pr-1 text-slate-500">
+                        <td className="py-2 pl-1 pr-1 text-content-faint">
                           <svg className={`h-4 w-4 transition-transform ${open ? "rotate-90" : ""}`} viewBox="0 0 20 20" fill="currentColor">
                             <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
                           </svg>
                         </td>
                         <td className="py-2 pr-3">
-                          <span className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${SEV_BADGE[g.severity] ?? "text-slate-300"}`}>
+                          <span className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${SEV_BADGE[g.severity] ?? "text-content-secondary"}`}>
                             {g.severity}
                           </span>
                         </td>
-                        <td className="py-2 pr-3 font-mono text-xs text-slate-300">{g.service}</td>
-                        <td className="max-w-lg truncate py-2 pr-3 text-slate-400">{g.status_detail || g.title || g.description}</td>
+                        <td className="py-2 pr-3 font-mono text-xs text-content-secondary">{g.service}</td>
+                        <td className="max-w-lg truncate py-2 pr-3 text-content-muted">{g.status_detail || g.title || g.description}</td>
                         <td className="py-2 pr-3 text-right">
-                          <span className="inline-block rounded-full bg-slate-800 border border-slate-700 px-2.5 py-0.5 text-xs font-semibold text-slate-200">
+                          <span className="inline-block rounded-full bg-surface-alt border border-edge px-2.5 py-0.5 text-xs font-semibold text-content">
                             {g.count}
                           </span>
                         </td>
                       </tr>
                       {open && (
-                        <tr className="border-b border-slate-900 bg-slate-900/20">
+                        <tr className="border-b border-edge-row bg-surface/10">
                           <td colSpan={5} className="px-4 py-3">
                             <div className="mb-2">
                               <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 text-xs">
-                                <dt className="text-slate-500">Finding</dt>
-                                <dd className="text-slate-300">{g.status_detail || "—"}</dd>
-                                <dt className="text-slate-500">Check</dt>
-                                <dd className="text-slate-300">{g.title || g.description || "—"}</dd>
-                                <dt className="text-slate-500">Description</dt>
-                                <dd className="text-slate-300 whitespace-pre-wrap">{g.check_description || "—"}</dd>
-                                <dt className="text-slate-500">Check ID</dt>
-                                <dd className="font-mono text-slate-300">{g.check_id}</dd>
-                                <dt className="text-slate-500">Remediation</dt>
-                                <dd className="text-slate-300 whitespace-pre-wrap">
+                                <dt className="text-content-faint">Finding</dt>
+                                <dd className="text-content-secondary">{g.status_detail || "—"}</dd>
+                                <dt className="text-content-faint">Check</dt>
+                                <dd className="text-content-secondary">{g.title || g.description || "—"}</dd>
+                                <dt className="text-content-faint">Description</dt>
+                                <dd className="text-content-secondary whitespace-pre-wrap">{g.check_description || "—"}</dd>
+                                <dt className="text-content-faint">Check ID</dt>
+                                <dd className="font-mono text-content-secondary">{g.check_id}</dd>
+                                <dt className="text-content-faint">Remediation</dt>
+                                <dd className="text-content-secondary whitespace-pre-wrap">
                                   {g.remediation?.replace(/\*\*/g, "") || "—"}
                                   {g.remediation_url && (
                                     <>
                                       {" "}
-                                      <a href={g.remediation_url} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:underline">
+                                      <a href={g.remediation_url} target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline dark:text-emerald-400">
                                         Reference
                                       </a>
                                     </>
@@ -743,7 +739,7 @@ export default function ScanDetailPage() {
                             </div>
                             <table className="w-full border-collapse text-left text-xs">
                               <thead>
-                                <tr className="border-b border-slate-800 text-slate-500">
+                                <tr className="border-b border-edge-soft text-content-faint">
                                   <th className="py-1.5 pr-3">Resource</th>
                                   <th className="py-1.5 pr-3">Region</th>
                                   <th className="py-1.5 pr-3">Status</th>
@@ -752,13 +748,13 @@ export default function ScanDetailPage() {
                               </thead>
                               <tbody>
                                 {g.resources.map((r) => (
-                                  <tr key={r.id} className="border-b border-slate-900/50">
-                                    <td className="max-w-xs truncate py-1.5 pr-3 font-mono text-slate-300">{r.resource_id}</td>
-                                    <td className="py-1.5 pr-3 text-slate-400">{r.region || "—"}</td>
-                                    <td className="py-1.5 pr-3 text-slate-400">{r.status}</td>
+                                  <tr key={r.id} className="border-b border-edge-row/50">
+                                    <td className="max-w-xs truncate py-1.5 pr-3 font-mono text-content-secondary">{r.resource_id}</td>
+                                    <td className="py-1.5 pr-3 text-content-muted">{r.region || "—"}</td>
+                                    <td className="py-1.5 pr-3 text-content-muted">{r.status}</td>
                                     <td className="py-1.5 pr-3" onClick={(e) => e.stopPropagation()}>
                                       <select
-                                        className="rounded border border-slate-700 bg-slate-950 px-2 py-0.5 text-xs"
+                                        className="rounded border border-edge bg-field px-2 py-0.5 text-xs text-content"
                                         value={r.triage ?? ""}
                                         onChange={(e) => {
                                           const v = e.target.value;
@@ -790,18 +786,18 @@ export default function ScanDetailPage() {
             <div className="mt-4 flex items-center justify-between text-sm">
               <button
                 type="button"
-                className="rounded-lg border border-slate-700 px-3 py-1.5 text-slate-300 hover:bg-slate-800 disabled:opacity-40"
+                className="rounded-lg border border-edge px-3 py-1.5 text-content-secondary hover:bg-surface-alt disabled:opacity-40"
                 disabled={issuesPage === 0}
                 onClick={() => setIssuesPage((p) => Math.max(0, p - 1))}
               >
                 Previous
               </button>
-              <span className="text-slate-500">
+              <span className="text-content-faint">
                 Page {issuesPage + 1} of {Math.ceil(groupedFindings.data.total_groups / PAGE_SIZE)}
               </span>
               <button
                 type="button"
-                className="rounded-lg border border-slate-700 px-3 py-1.5 text-slate-300 hover:bg-slate-800 disabled:opacity-40"
+                className="rounded-lg border border-edge px-3 py-1.5 text-content-secondary hover:bg-surface-alt disabled:opacity-40"
                 disabled={(issuesPage + 1) * PAGE_SIZE >= groupedFindings.data.total_groups}
                 onClick={() => setIssuesPage((p) => p + 1)}
               >
@@ -811,14 +807,14 @@ export default function ScanDetailPage() {
           )}
 
           {scan.data?.status !== "completed" && scan.data?.status !== "cancelled" && (
-            <p className="mt-4 text-slate-500">Issues appear when the scan completes.</p>
+            <p className="mt-4 text-content-faint">Issues appear when the scan completes.</p>
           )}
         </div>
       )}
 
       {tab === "diff" && (
         <div className="mt-4 space-y-4">
-          {diff.isError && <p className="text-slate-500">Diff not ready or no comparison scan.</p>}
+          {diff.isError && <p className="text-content-faint">Diff not ready or no comparison scan.</p>}
           {diff.data && (
             <>
               <div className="flex flex-wrap items-center gap-3">
@@ -829,7 +825,7 @@ export default function ScanDetailPage() {
                       key={cat}
                       type="button"
                       onClick={() => { setDiffCatFilter(active ? null : cat); setDiffPage(0); }}
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-all ${DIFF_BADGE[cat] ?? "text-slate-300"} ${active ? "ring-2 ring-slate-400 ring-offset-1 ring-offset-slate-950 scale-105" : "opacity-80 hover:opacity-100"}`}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-all ${DIFF_BADGE[cat] ?? "text-content-secondary"} ${active ? "ring-2 ring-content-faint ring-offset-1 ring-offset-page scale-105" : "opacity-80 hover:opacity-100"}`}
                     >
                       {cat} <span className="font-semibold">{n}</span>
                     </button>
@@ -838,7 +834,7 @@ export default function ScanDetailPage() {
                 {diffCatFilter && (
                   <button
                     type="button"
-                    className="text-xs text-slate-500 hover:text-slate-300"
+                    className="text-xs text-content-faint hover:text-content-secondary"
                     onClick={() => { setDiffCatFilter(null); setDiffPage(0); }}
                   >
                     Show all
@@ -847,12 +843,12 @@ export default function ScanDetailPage() {
                 <input
                   type="text"
                   placeholder="Search diff..."
-                  className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-200 placeholder-slate-500 w-48"
+                  className="w-40 rounded-lg border border-edge bg-field px-3 py-1.5 text-sm text-content placeholder-content-faint sm:w-48"
                   value={diffSearch}
                   onChange={(e) => { setDiffSearch(e.target.value); setDiffPage(0); }}
                 />
                 <select
-                  className="ml-auto rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-200"
+                  className="ml-auto rounded-lg border border-edge bg-field px-3 py-1.5 text-sm text-content"
                   value={diffTriageFilter}
                   onChange={(e) => { setDiffTriageFilter(e.target.value); setDiffPage(0); setDiffCatFilter(null); }}
                 >
@@ -866,7 +862,7 @@ export default function ScanDetailPage() {
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-left text-sm">
                   <thead>
-                    <tr className="border-b border-slate-800 text-slate-400">
+                    <tr className="border-b border-edge-soft text-content-muted">
                       <th className="w-6 py-2" />
                       <th className="py-2 pr-3">Change</th>
                       <th className="py-2 pr-3">Severity</th>
@@ -894,65 +890,65 @@ export default function ScanDetailPage() {
                         return (
                           <Fragment key={key}>
                             <tr
-                              className="border-b border-slate-900 hover:bg-slate-900/40 cursor-pointer"
+                              className="border-b border-edge-row hover:bg-surface/40 cursor-pointer"
                               onClick={() => setExpandedDiffFp(open ? null : key)}
                             >
-                              <td className="py-2 pl-1 pr-1 text-slate-500">
+                              <td className="py-2 pl-1 pr-1 text-content-faint">
                                 <svg className={`h-4 w-4 transition-transform ${open ? "rotate-90" : ""}`} viewBox="0 0 20 20" fill="currentColor">
                                   <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
                                 </svg>
                               </td>
                               <td className="py-2 pr-3">
-                                <span className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${DIFF_BADGE[i.category] ?? "text-slate-300"}`}>
+                                <span className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${DIFF_BADGE[i.category] ?? "text-content-secondary"}`}>
                                   {i.category}
                                 </span>
                               </td>
                               <td className="py-2 pr-3">
                                 {i.severity ? (
-                                  <span className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${SEV_BADGE[i.severity] ?? "text-slate-300"}`}>
+                                  <span className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${SEV_BADGE[i.severity] ?? "text-content-secondary"}`}>
                                     {i.severity}
                                   </span>
                                 ) : (
-                                  <span className="text-xs text-slate-600">--</span>
+                                  <span className="text-xs text-content-faint">--</span>
                                 )}
                               </td>
-                              <td className="py-2 pr-3 font-mono text-xs text-slate-300">{i.service ?? "--"}</td>
-                              <td className="max-w-[14rem] truncate py-2 pr-3 font-mono text-xs text-slate-400">
+                              <td className="py-2 pr-3 font-mono text-xs text-content-secondary">{i.service ?? "--"}</td>
+                              <td className="max-w-[14rem] truncate py-2 pr-3 font-mono text-xs text-content-muted">
                                 {i.resource_id ?? i.fingerprint.slice(0, 16) + "..."}
                               </td>
-                              <td className="py-2 pr-3 text-xs text-slate-400">{i.triage?.replace(/_/g, " ") ?? "—"}</td>
-                              <td className="max-w-md truncate py-2 text-slate-400">
+                              <td className="py-2 pr-3 text-xs text-content-muted">{i.triage?.replace(/_/g, " ") ?? "—"}</td>
+                              <td className="max-w-md truncate py-2 text-content-muted">
                                 {i.status_detail || i.description || "--"}
                               </td>
                             </tr>
                             {open && (
-                              <tr className="border-b border-slate-900 bg-slate-900/20">
+                              <tr className="border-b border-edge-row bg-surface/10">
                                 <td colSpan={7} className="px-4 py-3">
                                   <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 text-xs">
-                                    <dt className="text-slate-500">Finding</dt>
-                                    <dd className="text-slate-300">{i.status_detail || "—"}</dd>
-                                    <dt className="text-slate-500">Check</dt>
-                                    <dd className="text-slate-300">{i.title || i.description || "—"}</dd>
-                                    <dt className="text-slate-500">Description</dt>
-                                    <dd className="text-slate-300 whitespace-pre-wrap">{i.check_description || "—"}</dd>
-                                    <dt className="text-slate-500">Resource</dt>
-                                    <dd className="font-mono text-slate-300 break-all">{i.resource_id ?? "—"}</dd>
-                                    <dt className="text-slate-500">Check ID</dt>
-                                    <dd className="font-mono text-slate-300">{i.check_id ?? "—"}</dd>
-                                    <dt className="text-slate-500">Remediation</dt>
-                                    <dd className="text-slate-300 whitespace-pre-wrap">
+                                    <dt className="text-content-faint">Finding</dt>
+                                    <dd className="text-content-secondary">{i.status_detail || "—"}</dd>
+                                    <dt className="text-content-faint">Check</dt>
+                                    <dd className="text-content-secondary">{i.title || i.description || "—"}</dd>
+                                    <dt className="text-content-faint">Description</dt>
+                                    <dd className="text-content-secondary whitespace-pre-wrap">{i.check_description || "—"}</dd>
+                                    <dt className="text-content-faint">Resource</dt>
+                                    <dd className="font-mono text-content-secondary break-all">{i.resource_id ?? "—"}</dd>
+                                    <dt className="text-content-faint">Check ID</dt>
+                                    <dd className="font-mono text-content-secondary">{i.check_id ?? "—"}</dd>
+                                    <dt className="text-content-faint">Remediation</dt>
+                                    <dd className="text-content-secondary whitespace-pre-wrap">
                                       {i.remediation?.replace(/\*\*/g, "") || "—"}
                                       {i.remediation_url && (
                                         <>
                                           {" "}
-                                          <a href={i.remediation_url} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:underline">
+                                          <a href={i.remediation_url} target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline dark:text-emerald-400">
                                             Reference
                                           </a>
                                         </>
                                       )}
                                     </dd>
-                                    <dt className="text-slate-500">Fingerprint</dt>
-                                    <dd className="font-mono text-slate-400">{i.fingerprint}</dd>
+                                    <dt className="text-content-faint">Fingerprint</dt>
+                                    <dd className="font-mono text-content-muted">{i.fingerprint}</dd>
                                   </dl>
                                 </td>
                               </tr>
@@ -971,18 +967,18 @@ export default function ScanDetailPage() {
                   <div className="mt-4 flex items-center justify-between text-sm">
                     <button
                       type="button"
-                      className="rounded-lg border border-slate-700 px-3 py-1.5 text-slate-300 hover:bg-slate-800 disabled:opacity-40"
+                      className="rounded-lg border border-edge px-3 py-1.5 text-content-secondary hover:bg-surface-alt disabled:opacity-40"
                       disabled={diffPage === 0}
                       onClick={() => setDiffPage((p) => Math.max(0, p - 1))}
                     >
                       Previous
                     </button>
-                    <span className="text-slate-500">
+                    <span className="text-content-faint">
                       Page {diffPage + 1} of {totalPages}
                     </span>
                     <button
                       type="button"
-                      className="rounded-lg border border-slate-700 px-3 py-1.5 text-slate-300 hover:bg-slate-800 disabled:opacity-40"
+                      className="rounded-lg border border-edge px-3 py-1.5 text-content-secondary hover:bg-surface-alt disabled:opacity-40"
                       disabled={diffPage + 1 >= totalPages}
                       onClick={() => setDiffPage((p) => p + 1)}
                     >
@@ -998,12 +994,12 @@ export default function ScanDetailPage() {
 
       {tab === "logs" && (
         <div className="mt-4">
-          {scanLogs.isError && <p className="text-sm text-red-400">Could not load logs.</p>}
-          <pre className="max-h-[32rem] overflow-auto whitespace-pre-wrap break-all rounded-lg border border-slate-800 bg-slate-950 p-3 font-mono text-xs text-slate-300">
+          {scanLogs.isError && <p className="text-sm text-red-600 dark:text-red-400">Could not load logs.</p>}
+          <pre className="max-h-[32rem] overflow-auto whitespace-pre-wrap break-all rounded-lg border border-edge-soft bg-field p-3 font-mono text-xs text-content-secondary">
             {scanLogs.data?.logs || (scan.data?.status === "pending" || scan.data?.status === "running" ? "…" : "")}
           </pre>
           {(scan.data?.status === "pending" || scan.data?.status === "running") && (
-            <p className="mt-2 text-xs text-slate-500">Logs refresh every 2s while the scan is active.</p>
+            <p className="mt-2 text-xs text-content-faint">Logs refresh every 2s while the scan is active.</p>
           )}
         </div>
       )}
