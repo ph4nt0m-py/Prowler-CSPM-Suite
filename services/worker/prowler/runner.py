@@ -91,6 +91,10 @@ def _prowler_docker_cmd(
     return cmd
 
 
+# Prowler progress bar: "57/244 [23%]" or "383/383 [100%]"
+_PROGRESS_RE = re.compile(r"(\d+)\s*/\s*(\d+)\s*\[\s*(\d+)%\s*\]")
+
+
 def run_prowler_aws(
     *,
     image: str,
@@ -98,12 +102,18 @@ def run_prowler_aws(
     aws_env: dict[str, str],
     options: ProwlerAwsOptions | None = None,
     on_log_chunk: Callable[[str], None] | None = None,
+    on_progress: Callable[[int, int, int], None] | None = None,
 ) -> tuple[int, str]:
-    """Run Prowler in Docker. If ``on_log_chunk`` is set, stream stdout/stderr and flush batches (~1s / 8KiB)."""
+    """Run Prowler in Docker.
+
+    ``on_log_chunk``  — called with batched stdout text (~1s / 8KiB).
+    ``on_progress``   — called as ``(completed, total, pct)`` when Prowler
+                        emits progress like ``57/244 [23%]``.
+    """
     options = options or ProwlerAwsOptions()
     cmd = _prowler_docker_cmd(host_output_dir=host_output_dir, aws_env=aws_env, image=image, options=options)
 
-    if on_log_chunk is None:
+    if on_log_chunk is None and on_progress is None:
         proc = subprocess.run(
             cmd,
             capture_output=True,
@@ -125,14 +135,27 @@ def run_prowler_aws(
     last_flush = time.monotonic()
     flush_bytes = 8192
     flush_sec = 1.0
+    last_pct_reported = -1
+    tail_buf = ""
 
     def flush() -> None:
         nonlocal pending, last_flush
         if not pending:
             return
-        on_log_chunk("".join(pending))
+        if on_log_chunk:
+            on_log_chunk("".join(pending))
         pending.clear()
         last_flush = time.monotonic()
+
+    def _check_progress(text: str) -> None:
+        nonlocal last_pct_reported, tail_buf
+        tail_buf = (tail_buf + text)[-512:]
+        m = _PROGRESS_RE.search(tail_buf)
+        if m and on_progress:
+            completed, total, pct = int(m.group(1)), int(m.group(2)), int(m.group(3))
+            if pct != last_pct_reported:
+                last_pct_reported = pct
+                on_progress(completed, total, pct)
 
     def kill_proc() -> None:
         try:
@@ -150,6 +173,7 @@ def run_prowler_aws(
             if chunk:
                 full_parts.append(chunk)
                 pending.append(chunk)
+                _check_progress(chunk)
                 pending_len = sum(len(p) for p in pending)
                 if pending_len >= flush_bytes or time.monotonic() - last_flush >= flush_sec:
                     flush()

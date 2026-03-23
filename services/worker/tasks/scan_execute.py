@@ -119,12 +119,32 @@ def execute_scan_task(scan_id: str) -> None:
             if chunk:
                 _append_log(db, sid, chunk)
 
+        _last_mapped = [15]
+
+        def _on_prowler_progress(completed: int, total: int, pct: int) -> None:
+            mapped = 15 + int(pct * 0.55)  # 0-100% → 15-70%
+            if mapped <= _last_mapped[0]:
+                return
+            _last_mapped[0] = mapped
+            db.query(Scan).filter(Scan.id == sid, Scan.status == ScanStatus.running).update(
+                {Scan.progress_pct: mapped}, synchronize_session=False,
+            )
+            db.commit()
+            publish_scan_progress(sid, {
+                "pct": mapped,
+                "stage": "running_prowler",
+                "status": "running",
+                "checks_done": completed,
+                "checks_total": total,
+            })
+
         code, _log = run_prowler_aws(
             image=settings.prowler_image,
             host_output_dir=out_dir,
             aws_env=aws_env,
             options=ProwlerAwsOptions(),
             on_log_chunk=_stream_log,
+            on_progress=_on_prowler_progress,
         )
 
         scan_row = db.get(Scan, sid)

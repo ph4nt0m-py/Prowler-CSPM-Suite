@@ -109,6 +109,7 @@ export default function ScanDetailPage() {
   const qc = useQueryClient();
   const [wsPct, setWsPct] = useState<number | null>(null);
   const [wsStage, setWsStage] = useState<string | null>(null);
+  const [wsChecks, setWsChecks] = useState<{ done: number; total: number } | null>(null);
   const [tab, setTab] = useState<"findings" | "issues" | "diff" | "logs">("findings");
   const [fSeverity, setFSeverity] = useState("");
   const [fStatus, setFStatus] = useState("");
@@ -270,6 +271,8 @@ export default function ScanDetailPage() {
         const p = JSON.parse(ev.data as string);
         if (typeof p.pct === "number") setWsPct(p.pct);
         if (typeof p.stage === "string") setWsStage(p.stage);
+        if (typeof p.checks_done === "number" && typeof p.checks_total === "number")
+          setWsChecks({ done: p.checks_done, total: p.checks_total });
         // Scan row is marked ``completed`` before parse_findings runs; refresh findings when ingest catches up.
         if (p.stage === "diff" || p.stage === "completed") {
           qc.invalidateQueries({ queryKey: ["findings", scanId] });
@@ -304,10 +307,16 @@ export default function ScanDetailPage() {
           <h1 className="text-2xl font-semibold">Scan</h1>
           <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
             <span className="rounded-full border border-slate-700 px-2 py-0.5 font-mono text-xs">{scan.data.status}</span>
-            <span>{pct}%</span>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-28 overflow-hidden rounded-full bg-slate-700">
+                <div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{ width: `${pct}%` }} />
+              </div>
+              <span className="font-mono text-xs">{pct}%</span>
+            </div>
             {stageLabel && (
               <span className="rounded-full border border-slate-600 px-2 py-0.5 font-mono text-xs text-slate-300">
                 {stageLabel.replace(/_/g, " ")}
+                {wsChecks && stageLabel === "running_prowler" ? ` (${wsChecks.done}/${wsChecks.total})` : ""}
               </span>
             )}
             {scan.data.error_message && <span className="text-red-400">{scan.data.error_message}</span>}
