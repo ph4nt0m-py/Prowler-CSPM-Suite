@@ -12,7 +12,9 @@ class DiffItemOut(BaseModel):
     severity: str | None = None
     service: str | None = None
     resource_id: str | None = None
+    title: str | None = None
     description: str | None = None
+    check_description: str | None = None
     check_id: str | None = None
     remediation: str | None = None
     remediation_url: str | None = None

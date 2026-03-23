@@ -53,7 +53,7 @@ def get_diff(
                 continue
 
             f = findings_map.get(it.finding_id) if it.finding_id else None
-            rem_desc = rem_url = None
+            rem_desc = rem_url = f_title = f_check_desc = None
             if f:
                 raw = f.raw_json or {}
                 rem = raw.get("remediation") or {}
@@ -61,6 +61,12 @@ def get_diff(
                     rem_desc = rem.get("desc")
                     refs = rem.get("references")
                     rem_url = refs[0] if isinstance(refs, list) and refs else None
+                finfo = raw.get("finding_info") or raw.get("findingInfo") or {}
+                if isinstance(finfo, dict):
+                    f_title = finfo.get("title")
+                    f_check_desc = finfo.get("desc")
+                if not f_check_desc:
+                    f_check_desc = raw.get("message") or raw.get("status_detail")
             items.append(
                 DiffItemOut(
                     fingerprint=it.fingerprint,
@@ -69,7 +75,9 @@ def get_diff(
                     severity=f.severity.value if f else None,
                     service=f.service if f else None,
                     resource_id=f.resource_id if f else None,
+                    title=f_title,
                     description=f.description if f else None,
+                    check_description=f_check_desc,
                     check_id=f.check_id if f else None,
                     remediation=rem_desc,
                     remediation_url=rem_url,

@@ -29,6 +29,16 @@ def _remediation(f: Finding) -> tuple[str | None, str | None]:
     return desc, url
 
 
+def _title_and_desc(f: Finding) -> tuple[str | None, str | None]:
+    raw = f.raw_json or {}
+    finfo = raw.get("finding_info") or raw.get("findingInfo") or {}
+    title = finfo.get("title") if isinstance(finfo, dict) else None
+    desc = finfo.get("desc") if isinstance(finfo, dict) else None
+    if not desc:
+        desc = raw.get("message") or raw.get("status_detail")
+    return title, desc
+
+
 _SEVERITY_ORDER = {
     FindingSeverity.critical: 0,
     FindingSeverity.high: 1,
@@ -90,6 +100,7 @@ def list_findings(
     items: list[FindingOut] = []
     for f in rows:
         rem_desc, rem_url = _remediation(f)
+        f_title, f_check_desc = _title_and_desc(f)
         items.append(
             FindingOut(
                 id=f.id,
@@ -101,7 +112,9 @@ def list_findings(
                 service=f.service,
                 severity=f.severity,
                 status=f.status,
+                title=f_title,
                 description=f.description,
+                check_description=f_check_desc,
                 compliance_framework=f.compliance_framework,
                 remediation=rem_desc,
                 remediation_url=rem_url,
@@ -179,6 +192,7 @@ def list_findings_grouped(
     for check_id, findings in buckets.items():
         rep = findings[0]
         rem_desc, rem_url = _remediation(rep)
+        rep_title, rep_check_desc = _title_and_desc(rep)
         resources = [
             ResourceInstance(
                 id=f.id,
@@ -193,7 +207,9 @@ def list_findings_grouped(
         groups.append(
             GroupedFinding(
                 check_id=check_id,
+                title=rep_title,
                 description=rep.description,
+                check_description=rep_check_desc,
                 severity=rep.severity,
                 service=rep.service,
                 remediation=rem_desc,
@@ -223,6 +239,7 @@ def get_finding(finding_id: UUID, db: Session = Depends(get_db), user: User = De
         .first()
     )
     rem_desc, rem_url = _remediation(f)
+    f_title, f_check_desc = _title_and_desc(f)
     return FindingOut(
         id=f.id,
         scan_id=f.scan_id,
@@ -233,7 +250,9 @@ def get_finding(finding_id: UUID, db: Session = Depends(get_db), user: User = De
         service=f.service,
         severity=f.severity,
         status=f.status,
+        title=f_title,
         description=f.description,
+        check_description=f_check_desc,
         compliance_framework=f.compliance_framework,
         remediation=rem_desc,
         remediation_url=rem_url,

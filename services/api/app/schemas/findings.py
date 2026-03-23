@@ -17,7 +17,9 @@ class FindingOut(BaseModel):
     service: str
     severity: FindingSeverity
     status: FindingStatus
+    title: str | None = None
     description: str | None
+    check_description: str | None = None
     compliance_framework: str | None
     remediation: str | None = None
     remediation_url: str | None = None
@@ -43,7 +45,9 @@ class ResourceInstance(BaseModel):
 
 class GroupedFinding(BaseModel):
     check_id: str
+    title: str | None = None
     description: str | None
+    check_description: str | None = None
     severity: FindingSeverity
     service: str
     remediation: str | None = None
