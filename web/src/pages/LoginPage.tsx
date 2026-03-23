@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch, setToken } from "../api/client";
+import Aurora from "../components/Aurora";
 import { useTheme } from "../context/ThemeContext";
 
 export default function LoginPage() {
@@ -27,6 +28,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-page p-6">
+      <Aurora />
       <form
         onSubmit={onSubmit}
         className="w-full max-w-md space-y-4 rounded-xl border border-edge-soft bg-surface/80 p-8 shadow-xl backdrop-blur"
