@@ -57,6 +57,7 @@ type DiffItem = {
   check_id: string | null;
   remediation: string | null;
   remediation_url: string | null;
+  triage: string | null;
 };
 
 type DiffOut = {
@@ -64,6 +65,31 @@ type DiffOut = {
   previous_scan_id: string | null;
   counts: Record<string, number>;
   items: DiffItem[];
+};
+
+type ResourceInstance = {
+  id: string;
+  resource_id: string;
+  region: string;
+  status: string;
+  triage: string | null;
+  fingerprint: string;
+};
+
+type GroupedFinding = {
+  check_id: string;
+  description: string | null;
+  severity: string;
+  service: string;
+  remediation: string | null;
+  remediation_url: string | null;
+  count: number;
+  resources: ResourceInstance[];
+};
+
+type PaginatedGroupedFindings = {
+  total_groups: number;
+  groups: GroupedFinding[];
 };
 
 const DIFF_BADGE: Record<string, string> = {
@@ -77,7 +103,7 @@ export default function ScanDetailPage() {
   const qc = useQueryClient();
   const [wsPct, setWsPct] = useState<number | null>(null);
   const [wsStage, setWsStage] = useState<string | null>(null);
-  const [tab, setTab] = useState<"findings" | "diff" | "logs">("findings");
+  const [tab, setTab] = useState<"findings" | "issues" | "diff" | "logs">("findings");
   const [fSeverity, setFSeverity] = useState("");
   const [fStatus, setFStatus] = useState("");
   const [fTriage, setFTriage] = useState("");
@@ -87,6 +113,11 @@ export default function ScanDetailPage() {
   const [expandedDiffFp, setExpandedDiffFp] = useState<string | null>(null);
   const [diffCatFilter, setDiffCatFilter] = useState<string | null>(null);
   const [diffPage, setDiffPage] = useState(0);
+  const [diffTriageFilter, setDiffTriageFilter] = useState("");
+  const [issueSeverity, setIssueSeverity] = useState("");
+  const [issueService, setIssueService] = useState("");
+  const [issuesPage, setIssuesPage] = useState(0);
+  const [expandedCheckId, setExpandedCheckId] = useState<string | null>(null);
 
   const scan = useQuery({
     queryKey: ["scan", scanId],
@@ -121,16 +152,40 @@ export default function ScanDetailPage() {
     staleTime: 60_000,
   });
 
+  const issuesParams = useMemo(() => {
+    const p = new URLSearchParams();
+    if (issueSeverity) p.set("severity", issueSeverity);
+    if (issueService) p.set("service", issueService);
+    p.set("limit", String(PAGE_SIZE));
+    p.set("offset", String(issuesPage * PAGE_SIZE));
+    return p.toString();
+  }, [issueSeverity, issueService, issuesPage]);
+
+  const groupedFindings = useQuery({
+    queryKey: ["groupedFindings", scanId, issuesParams],
+    queryFn: () => apiFetch<PaginatedGroupedFindings>(`/api/v1/scans/${scanId}/findings/grouped?${issuesParams}`),
+    enabled: !!scanId && scan.data?.status === "completed",
+    staleTime: 0,
+    placeholderData: (prev) => prev,
+  });
+
   useEffect(() => {
     if (scan.data?.status === "completed" && scanId) {
       qc.invalidateQueries({ queryKey: ["findings", scanId] });
       qc.invalidateQueries({ queryKey: ["findingServices", scanId] });
+      qc.invalidateQueries({ queryKey: ["groupedFindings", scanId] });
     }
   }, [scan.data?.status, scanId, qc]);
 
+  const diffParams = useMemo(() => {
+    const p = new URLSearchParams();
+    if (diffTriageFilter) p.set("triage", diffTriageFilter);
+    return p.toString();
+  }, [diffTriageFilter]);
+
   const diff = useQuery({
-    queryKey: ["diff", scanId],
-    queryFn: () => apiFetch<DiffOut>(`/api/v1/scans/${scanId}/diff`),
+    queryKey: ["diff", scanId, diffParams],
+    queryFn: () => apiFetch<DiffOut>(`/api/v1/scans/${scanId}/diff${diffParams ? `?${diffParams}` : ""}`),
     enabled: !!scanId && scan.data?.status === "completed",
     retry: false,
   });
@@ -168,6 +223,7 @@ export default function ScanDetailPage() {
       qc.invalidateQueries({ queryKey: ["scan", scanId] });
       qc.invalidateQueries({ queryKey: ["findings", scanId] });
       qc.invalidateQueries({ queryKey: ["findingServices", scanId] });
+      qc.invalidateQueries({ queryKey: ["groupedFindings", scanId] });
       qc.invalidateQueries({ queryKey: ["diff", scanId] });
       qc.invalidateQueries({ queryKey: ["scanLogs", scanId] });
     },
@@ -179,7 +235,10 @@ export default function ScanDetailPage() {
         method: "PUT",
         body: JSON.stringify({ state: vars.state }),
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["findings", scanId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["findings", scanId] });
+      qc.invalidateQueries({ queryKey: ["groupedFindings", scanId] });
+    },
   });
 
   const base = import.meta.env.VITE_API_URL || "";
@@ -209,6 +268,7 @@ export default function ScanDetailPage() {
         if (p.stage === "diff" || p.stage === "completed") {
           qc.invalidateQueries({ queryKey: ["findings", scanId] });
           qc.invalidateQueries({ queryKey: ["findingServices", scanId] });
+          qc.invalidateQueries({ queryKey: ["groupedFindings", scanId] });
           qc.invalidateQueries({ queryKey: ["diff", scanId] });
         }
       } catch {
@@ -322,6 +382,13 @@ export default function ScanDetailPage() {
           onClick={() => setTab("findings")}
         >
           Findings
+        </button>
+        <button
+          type="button"
+          className={`rounded-lg px-3 py-1 text-sm ${tab === "issues" ? "bg-slate-800" : "text-slate-400"}`}
+          onClick={() => setTab("issues")}
+        >
+          Issues
         </button>
         <button
           type="button"
@@ -528,12 +595,186 @@ export default function ScanDetailPage() {
         </div>
       )}
 
+      {tab === "issues" && (
+        <div className="mt-4">
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <select
+              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-200"
+              value={issueSeverity}
+              onChange={(e) => { setIssueSeverity(e.target.value); setIssuesPage(0); }}
+            >
+              <option value="">All severities</option>
+              <option value="critical">Critical</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+            <select
+              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-200"
+              value={issueService}
+              onChange={(e) => { setIssueService(e.target.value); setIssuesPage(0); }}
+            >
+              <option value="">All services</option>
+              {services.data?.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+            {(issueSeverity || issueService) && (
+              <button
+                type="button"
+                className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm text-slate-400 hover:text-slate-200"
+                onClick={() => { setIssueSeverity(""); setIssueService(""); setIssuesPage(0); }}
+              >
+                Clear filters
+              </button>
+            )}
+            {groupedFindings.data && (
+              <span className="ml-auto text-xs text-slate-500">
+                {groupedFindings.data.total_groups} issue type{groupedFindings.data.total_groups !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-800 text-slate-400">
+                  <th className="w-6 py-2" />
+                  <th className="py-2 pr-3">Severity</th>
+                  <th className="py-2 pr-3">Service</th>
+                  <th className="py-2 pr-3">Description</th>
+                  <th className="py-2 pr-3 text-right">Instances</th>
+                </tr>
+              </thead>
+              <tbody>
+                {groupedFindings.data?.groups.map((g) => {
+                  const open = expandedCheckId === g.check_id;
+                  return (
+                    <Fragment key={g.check_id}>
+                      <tr
+                        className="border-b border-slate-900 hover:bg-slate-900/40 cursor-pointer"
+                        onClick={() => setExpandedCheckId(open ? null : g.check_id)}
+                      >
+                        <td className="py-2 pl-1 pr-1 text-slate-500">
+                          <svg className={`h-4 w-4 transition-transform ${open ? "rotate-90" : ""}`} viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                          </svg>
+                        </td>
+                        <td className="py-2 pr-3">
+                          <span className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${SEV_BADGE[g.severity] ?? "text-slate-300"}`}>
+                            {g.severity}
+                          </span>
+                        </td>
+                        <td className="py-2 pr-3 font-mono text-xs text-slate-300">{g.service}</td>
+                        <td className="max-w-lg truncate py-2 pr-3 text-slate-400">{g.description}</td>
+                        <td className="py-2 pr-3 text-right">
+                          <span className="inline-block rounded-full bg-slate-800 border border-slate-700 px-2.5 py-0.5 text-xs font-semibold text-slate-200">
+                            {g.count}
+                          </span>
+                        </td>
+                      </tr>
+                      {open && (
+                        <tr className="border-b border-slate-900 bg-slate-900/20">
+                          <td colSpan={5} className="px-4 py-3">
+                            <div className="mb-2">
+                              <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 text-xs">
+                                <dt className="text-slate-500">Check ID</dt>
+                                <dd className="font-mono text-slate-300">{g.check_id}</dd>
+                                <dt className="text-slate-500">Remediation</dt>
+                                <dd className="text-slate-300 whitespace-pre-wrap">
+                                  {g.remediation?.replace(/\*\*/g, "") || "—"}
+                                  {g.remediation_url && (
+                                    <>
+                                      {" "}
+                                      <a href={g.remediation_url} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:underline">
+                                        Reference
+                                      </a>
+                                    </>
+                                  )}
+                                </dd>
+                              </dl>
+                            </div>
+                            <table className="w-full border-collapse text-left text-xs">
+                              <thead>
+                                <tr className="border-b border-slate-800 text-slate-500">
+                                  <th className="py-1.5 pr-3">Resource</th>
+                                  <th className="py-1.5 pr-3">Region</th>
+                                  <th className="py-1.5 pr-3">Status</th>
+                                  <th className="py-1.5 pr-3">Triage</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {g.resources.map((r) => (
+                                  <tr key={r.id} className="border-b border-slate-900/50">
+                                    <td className="max-w-xs truncate py-1.5 pr-3 font-mono text-slate-300">{r.resource_id}</td>
+                                    <td className="py-1.5 pr-3 text-slate-400">{r.region || "—"}</td>
+                                    <td className="py-1.5 pr-3 text-slate-400">{r.status}</td>
+                                    <td className="py-1.5 pr-3" onClick={(e) => e.stopPropagation()}>
+                                      <select
+                                        className="rounded border border-slate-700 bg-slate-950 px-2 py-0.5 text-xs"
+                                        value={r.triage ?? ""}
+                                        onChange={(e) => {
+                                          const v = e.target.value;
+                                          if (!v || !scan.data?.client_id) return;
+                                          triage.mutate({ clientId: scan.data.client_id, fingerprint: r.fingerprint, state: v });
+                                        }}
+                                      >
+                                        <option value="">—</option>
+                                        <option value="valid">Valid</option>
+                                        <option value="false_positive">False positive</option>
+                                        <option value="not_applicable">N/A</option>
+                                      </select>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {groupedFindings.data && groupedFindings.data.total_groups > PAGE_SIZE && (
+            <div className="mt-4 flex items-center justify-between text-sm">
+              <button
+                type="button"
+                className="rounded-lg border border-slate-700 px-3 py-1.5 text-slate-300 hover:bg-slate-800 disabled:opacity-40"
+                disabled={issuesPage === 0}
+                onClick={() => setIssuesPage((p) => Math.max(0, p - 1))}
+              >
+                Previous
+              </button>
+              <span className="text-slate-500">
+                Page {issuesPage + 1} of {Math.ceil(groupedFindings.data.total_groups / PAGE_SIZE)}
+              </span>
+              <button
+                type="button"
+                className="rounded-lg border border-slate-700 px-3 py-1.5 text-slate-300 hover:bg-slate-800 disabled:opacity-40"
+                disabled={(issuesPage + 1) * PAGE_SIZE >= groupedFindings.data.total_groups}
+                onClick={() => setIssuesPage((p) => p + 1)}
+              >
+                Next
+              </button>
+            </div>
+          )}
+
+          {scan.data?.status !== "completed" && scan.data?.status !== "cancelled" && (
+            <p className="mt-4 text-slate-500">Issues appear when the scan completes.</p>
+          )}
+        </div>
+      )}
+
       {tab === "diff" && (
         <div className="mt-4 space-y-4">
           {diff.isError && <p className="text-slate-500">Diff not ready or no comparison scan.</p>}
           {diff.data && (
             <>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 {Object.entries(diff.data.counts).map(([cat, n]) => {
                   const active = diffCatFilter === cat;
                   return (
@@ -556,6 +797,17 @@ export default function ScanDetailPage() {
                     Show all
                   </button>
                 )}
+                <select
+                  className="ml-auto rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-200"
+                  value={diffTriageFilter}
+                  onChange={(e) => { setDiffTriageFilter(e.target.value); setDiffPage(0); setDiffCatFilter(null); }}
+                >
+                  <option value="">All triage</option>
+                  <option value="valid">Valid only</option>
+                  <option value="false_positive">False positive only</option>
+                  <option value="not_applicable">N/A only</option>
+                  <option value="none">Untriaged only</option>
+                </select>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-left text-sm">
@@ -566,6 +818,7 @@ export default function ScanDetailPage() {
                       <th className="py-2 pr-3">Severity</th>
                       <th className="py-2 pr-3">Service</th>
                       <th className="py-2 pr-3">Resource</th>
+                      <th className="py-2 pr-3">Triage</th>
                       <th className="py-2">Description</th>
                     </tr>
                   </thead>
@@ -604,13 +857,14 @@ export default function ScanDetailPage() {
                               <td className="max-w-[14rem] truncate py-2 pr-3 font-mono text-xs text-slate-400">
                                 {i.resource_id ?? i.fingerprint.slice(0, 16) + "..."}
                               </td>
+                              <td className="py-2 pr-3 text-xs text-slate-400">{i.triage?.replace(/_/g, " ") ?? "—"}</td>
                               <td className="max-w-md truncate py-2 text-slate-400">
                                 {i.description ?? "--"}
                               </td>
                             </tr>
                             {open && (
                               <tr className="border-b border-slate-900 bg-slate-900/20">
-                                <td colSpan={6} className="px-4 py-3">
+                                <td colSpan={7} className="px-4 py-3">
                                   <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 text-xs">
                                     <dt className="text-slate-500">Description</dt>
                                     <dd className="text-slate-300 whitespace-pre-wrap">{i.description ?? "—"}</dd>

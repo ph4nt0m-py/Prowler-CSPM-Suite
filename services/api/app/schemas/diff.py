@@ -16,6 +16,7 @@ class DiffItemOut(BaseModel):
     check_id: str | None = None
     remediation: str | None = None
     remediation_url: str | None = None
+    triage: str | None = None
 
 
 class DiffOut(BaseModel):

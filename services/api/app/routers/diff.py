@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -9,6 +9,7 @@ from app.deps import get_current_user
 from app.models.diff import DiffCategory, ScanDiff, ScanDiffItem
 from app.models.finding import Finding
 from app.models.scan import Scan
+from app.models.triage import FindingTriage, TriageState
 from app.models.user import User
 from app.schemas.diff import DiffItemOut, DiffOut
 
@@ -16,17 +17,24 @@ router = APIRouter(tags=["diff"])
 
 
 @router.get("/scans/{scan_id}/diff", response_model=DiffOut)
-def get_diff(scan_id: UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> DiffOut:
+def get_diff(
+    scan_id: UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    triage: str | None = Query(None),
+) -> DiffOut:
     s = db.get(Scan, scan_id)
     if not s:
         raise HTTPException(status_code=404, detail="Scan not found")
 
+    triage_map: dict[str, str] = {
+        t.fingerprint: t.state.value
+        for t in db.query(FindingTriage).filter(FindingTriage.client_id == s.client_id).all()
+    }
+
     diff_row = db.query(ScanDiff).filter(ScanDiff.scan_id == scan_id).first()
     if diff_row:
         items_db = db.query(ScanDiffItem).filter(ScanDiffItem.scan_diff_id == diff_row.id).all()
-        counts: dict[str, int] = {c.value: 0 for c in DiffCategory}
-        for it in items_db:
-            counts[it.category.value] += 1
 
         finding_ids = [it.finding_id for it in items_db if it.finding_id]
         findings_map = (
@@ -37,6 +45,13 @@ def get_diff(scan_id: UUID, db: Session = Depends(get_db), user: User = Depends(
 
         items: list[DiffItemOut] = []
         for it in items_db:
+            item_triage = triage_map.get(it.fingerprint)
+
+            if triage == "none" and item_triage is not None:
+                continue
+            if triage and triage != "none" and item_triage != triage:
+                continue
+
             f = findings_map.get(it.finding_id) if it.finding_id else None
             rem_desc = rem_url = None
             if f:
@@ -58,8 +73,14 @@ def get_diff(scan_id: UUID, db: Session = Depends(get_db), user: User = Depends(
                     check_id=f.check_id if f else None,
                     remediation=rem_desc,
                     remediation_url=rem_url,
+                    triage=item_triage,
                 )
             )
+
+        counts: dict[str, int] = {c.value: 0 for c in DiffCategory}
+        for it in items:
+            counts[it.category.value] += 1
+
         return DiffOut(
             scan_id=scan_id,
             previous_scan_id=diff_row.previous_scan_id,

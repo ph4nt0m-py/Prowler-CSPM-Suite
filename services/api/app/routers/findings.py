@@ -9,7 +9,13 @@ from app.models.finding import Finding, FindingSeverity, FindingStatus
 from app.models.scan import Scan
 from app.models.triage import FindingTriage, TriageState
 from app.models.user import User
-from app.schemas.findings import FindingOut, PaginatedFindings
+from app.schemas.findings import (
+    FindingOut,
+    GroupedFinding,
+    PaginatedFindings,
+    PaginatedGroupedFindings,
+    ResourceInstance,
+)
 
 router = APIRouter(tags=["findings"])
 
@@ -124,6 +130,83 @@ def list_finding_services(
         .order_by(Finding.service)
         .all()
     ]
+
+
+@router.get("/scans/{scan_id}/findings/grouped", response_model=PaginatedGroupedFindings)
+def list_findings_grouped(
+    scan_id: UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    severity: FindingSeverity | None = Query(None),
+    service: str | None = Query(None),
+    triage: str | None = Query(None),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+) -> PaginatedGroupedFindings:
+    s = db.get(Scan, scan_id)
+    if not s:
+        raise HTTPException(status_code=404, detail="Scan not found")
+
+    q = db.query(Finding).filter(Finding.scan_id == scan_id)
+    if severity:
+        q = q.filter(Finding.severity == severity)
+    if service:
+        q = q.filter(Finding.service == service)
+
+    triage_map = {
+        t.fingerprint: t.state
+        for t in db.query(FindingTriage).filter(FindingTriage.client_id == s.client_id).all()
+    }
+
+    if triage == "none":
+        triaged_fps = set(triage_map.keys())
+        q = q.filter(Finding.fingerprint.notin_(triaged_fps) if triaged_fps else True)
+    elif triage is not None:
+        try:
+            want = TriageState(triage)
+            matching_fps = {fp for fp, st in triage_map.items() if st == want}
+            q = q.filter(Finding.fingerprint.in_(matching_fps) if matching_fps else False)
+        except ValueError:
+            pass
+
+    rows = q.all()
+
+    buckets: dict[str, list[Finding]] = {}
+    for f in rows:
+        buckets.setdefault(f.check_id, []).append(f)
+
+    groups: list[GroupedFinding] = []
+    for check_id, findings in buckets.items():
+        rep = findings[0]
+        rem_desc, rem_url = _remediation(rep)
+        resources = [
+            ResourceInstance(
+                id=f.id,
+                resource_id=f.resource_id,
+                region=f.region,
+                status=f.status,
+                triage=triage_map.get(f.fingerprint),
+                fingerprint=f.fingerprint,
+            )
+            for f in findings
+        ]
+        groups.append(
+            GroupedFinding(
+                check_id=check_id,
+                description=rep.description,
+                severity=rep.severity,
+                service=rep.service,
+                remediation=rem_desc,
+                remediation_url=rem_url,
+                count=len(findings),
+                resources=resources,
+            )
+        )
+
+    groups.sort(key=lambda g: (_SEVERITY_ORDER.get(g.severity, 99), -g.count))
+    total_groups = len(groups)
+    page = groups[offset : offset + limit]
+    return PaginatedGroupedFindings(total_groups=total_groups, groups=page)
 
 
 @router.get("/findings/{finding_id}", response_model=FindingOut)

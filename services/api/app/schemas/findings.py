@@ -30,3 +30,28 @@ class FindingOut(BaseModel):
 class PaginatedFindings(BaseModel):
     total: int
     items: list[FindingOut]
+
+
+class ResourceInstance(BaseModel):
+    id: UUID
+    resource_id: str
+    region: str
+    status: FindingStatus
+    triage: TriageState | None = None
+    fingerprint: str
+
+
+class GroupedFinding(BaseModel):
+    check_id: str
+    description: str | None
+    severity: FindingSeverity
+    service: str
+    remediation: str | None = None
+    remediation_url: str | None = None
+    count: int
+    resources: list[ResourceInstance]
+
+
+class PaginatedGroupedFindings(BaseModel):
+    total_groups: int
+    groups: list[GroupedFinding]
