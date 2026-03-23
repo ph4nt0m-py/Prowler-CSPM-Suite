@@ -55,8 +55,15 @@ def _severity_from_value(val: Any) -> FindingSeverity:
     return FindingSeverity.medium
 
 
+_INGEST_STATUS_CODES = {"FAIL", "MANUAL"}
+
+
 def _extract_from_record(rec: dict[str, Any]) -> dict[str, Any] | None:
     """Map one raw record to normalized fields; return None to skip."""
+    status_code = str(rec.get("status_code") or rec.get("StatusCode") or "").upper()
+    if status_code and status_code not in _INGEST_STATUS_CODES:
+        return None
+
     # Prowler 5+ json-ocsf: py_ocsf_models DetectionFinding uses top-level ``finding_info`` (not ``finding``).
     finfo_raw = rec.get("finding_info")
     if not isinstance(finfo_raw, dict):
