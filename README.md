@@ -2,6 +2,23 @@
 
 Production-oriented monorepo for running **Prowler**-backed cloud security posture management: **FastAPI** API, **Celery** workers, **PostgreSQL**, **Redis**, and a **React** (Vite + Tailwind) UI. Designed local-first via Docker Compose; logical boundaries support splitting services later.
 
+## Features
+
+- **Multi-client management** — organize scans by client or tenant with isolated credentials, scans, and findings per client; cascade deletion keeps things clean
+- **Encrypted credential vault** — AWS, Azure, and GCP credentials stored with server-side encryption; API responses expose metadata only; AWS connectivity test via STS
+- **Orchestrated scanning** — one-click scan launch from the UI; queued execution via Celery; Docker-outside-of-Docker Prowler runs; cancellable jobs; captured Prowler logs with live streaming
+- **Real-time progress** — WebSocket-driven progress percentage and stage updates pushed to the browser during scan execution
+- **Structured findings database** — Prowler JSON-OCSF output parsed and normalized into PostgreSQL; filterable by severity, status, service, and triage state; server-side pagination
+- **Scan diffing** — compare any scan against a baseline; automatic new / open / closed classification; persisted diff with category counts on the dashboard
+- **Triage workflow** — per-client, per-fingerprint triage (valid / false positive / not applicable) that persists across scans
+- **Remediation guidance** — remediation description and reference URL extracted from Prowler output and displayed inline in findings and diff views
+- **Dashboard** — per-client summary with severity breakdown, service distribution, and diff counts rendered as color-coded badges
+- **Excel export** — one-click download of scan findings as `.xlsx` with triage status included
+- **Audit logging** — server-side audit trail for sensitive actions (client, credential, scan, and triage changes)
+- **Role-based access** — JWT authentication with admin and user roles; admin-only endpoints for Prowler image management
+- **Automated Prowler updates** — scheduled checks for new Prowler releases every 6 hours with optional auto-pull of the latest image
+- **Single-command deployment** — full stack (API, worker, scheduler, database, cache, UI) via `docker compose up --build`
+
 ## Quick start
 
 ```bash
