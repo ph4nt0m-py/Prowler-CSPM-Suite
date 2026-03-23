@@ -128,6 +128,9 @@ export default function ScanDetailPage() {
   const [issueService, setIssueService] = useState("");
   const [issuesPage, setIssuesPage] = useState(0);
   const [expandedCheckId, setExpandedCheckId] = useState<string | null>(null);
+  const [fSearch, setFSearch] = useState("");
+  const [issueSearch, setIssueSearch] = useState("");
+  const [diffSearch, setDiffSearch] = useState("");
 
   const scan = useQuery({
     queryKey: ["scan", scanId],
@@ -142,10 +145,11 @@ export default function ScanDetailPage() {
     if (fStatus) p.set("status", fStatus);
     if (fTriage) p.set("triage", fTriage);
     if (fService) p.set("service", fService);
+    if (fSearch) p.set("search", fSearch);
     p.set("limit", String(PAGE_SIZE));
     p.set("offset", String(page * PAGE_SIZE));
     return p.toString();
-  }, [fSeverity, fStatus, fTriage, fService, page]);
+  }, [fSeverity, fStatus, fTriage, fService, fSearch, page]);
 
   const findings = useQuery({
     queryKey: ["findings", scanId, findingsParams],
@@ -166,10 +170,11 @@ export default function ScanDetailPage() {
     const p = new URLSearchParams();
     if (issueSeverity) p.set("severity", issueSeverity);
     if (issueService) p.set("service", issueService);
+    if (issueSearch) p.set("search", issueSearch);
     p.set("limit", String(PAGE_SIZE));
     p.set("offset", String(issuesPage * PAGE_SIZE));
     return p.toString();
-  }, [issueSeverity, issueService, issuesPage]);
+  }, [issueSeverity, issueService, issueSearch, issuesPage]);
 
   const groupedFindings = useQuery({
     queryKey: ["groupedFindings", scanId, issuesParams],
@@ -470,11 +475,18 @@ export default function ScanDetailPage() {
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
-            {(fSeverity || fStatus || fTriage || fService) && (
+            <input
+              type="text"
+              placeholder="Search findings..."
+              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-200 placeholder-slate-500 w-48"
+              value={fSearch}
+              onChange={(e) => { setFSearch(e.target.value); setPage(0); }}
+            />
+            {(fSeverity || fStatus || fTriage || fService || fSearch) && (
               <button
                 type="button"
                 className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm text-slate-400 hover:text-slate-200"
-                onClick={() => { setFSeverity(""); setFStatus(""); setFTriage(""); setFService(""); setPage(0); }}
+                onClick={() => { setFSeverity(""); setFStatus(""); setFTriage(""); setFService(""); setFSearch(""); setPage(0); }}
               >
                 Clear filters
               </button>
@@ -641,11 +653,18 @@ export default function ScanDetailPage() {
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
-            {(issueSeverity || issueService) && (
+            <input
+              type="text"
+              placeholder="Search issues..."
+              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-200 placeholder-slate-500 w-48"
+              value={issueSearch}
+              onChange={(e) => { setIssueSearch(e.target.value); setIssuesPage(0); }}
+            />
+            {(issueSeverity || issueService || issueSearch) && (
               <button
                 type="button"
                 className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm text-slate-400 hover:text-slate-200"
-                onClick={() => { setIssueSeverity(""); setIssueService(""); setIssuesPage(0); }}
+                onClick={() => { setIssueSeverity(""); setIssueService(""); setIssueSearch(""); setIssuesPage(0); }}
               >
                 Clear filters
               </button>
@@ -825,6 +844,13 @@ export default function ScanDetailPage() {
                     Show all
                   </button>
                 )}
+                <input
+                  type="text"
+                  placeholder="Search diff..."
+                  className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-200 placeholder-slate-500 w-48"
+                  value={diffSearch}
+                  onChange={(e) => { setDiffSearch(e.target.value); setDiffPage(0); }}
+                />
                 <select
                   className="ml-auto rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-200"
                   value={diffTriageFilter}
@@ -852,7 +878,16 @@ export default function ScanDetailPage() {
                   </thead>
                   <tbody>
                     {(() => {
-                      const filtered = diffCatFilter ? diff.data.items.filter((i) => i.category === diffCatFilter) : diff.data.items;
+                      let filtered = diffCatFilter ? diff.data.items.filter((i) => i.category === diffCatFilter) : diff.data.items;
+                      if (diffSearch) {
+                        const q = diffSearch.toLowerCase();
+                        filtered = filtered.filter((i) =>
+                          (i.status_detail ?? i.description ?? "").toLowerCase().includes(q)
+                          || (i.resource_id ?? "").toLowerCase().includes(q)
+                          || (i.check_id ?? "").toLowerCase().includes(q)
+                          || (i.service ?? "").toLowerCase().includes(q)
+                        );
+                      }
                       return filtered.slice(diffPage * PAGE_SIZE, (diffPage + 1) * PAGE_SIZE).map((i) => {
                         const key = `${i.category}-${i.fingerprint}`;
                         const open = expandedDiffFp === key;

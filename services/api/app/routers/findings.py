@@ -58,6 +58,7 @@ def list_findings(
     status: FindingStatus | None = Query(None),
     service: str | None = Query(None),
     triage: str | None = Query(None),
+    search: str | None = Query(None),
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
 ) -> PaginatedFindings:
@@ -72,6 +73,14 @@ def list_findings(
         q = q.filter(Finding.status == status)
     if service:
         q = q.filter(Finding.service == service)
+    if search:
+        term = f"%{search}%"
+        q = q.filter(
+            Finding.description.ilike(term)
+            | Finding.resource_id.ilike(term)
+            | Finding.check_id.ilike(term)
+            | Finding.service.ilike(term)
+        )
 
     triage_map = {
         t.fingerprint: t.state
@@ -156,6 +165,7 @@ def list_findings_grouped(
     severity: FindingSeverity | None = Query(None),
     service: str | None = Query(None),
     triage: str | None = Query(None),
+    search: str | None = Query(None),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
 ) -> PaginatedGroupedFindings:
@@ -168,6 +178,14 @@ def list_findings_grouped(
         q = q.filter(Finding.severity == severity)
     if service:
         q = q.filter(Finding.service == service)
+    if search:
+        term = f"%{search}%"
+        q = q.filter(
+            Finding.description.ilike(term)
+            | Finding.resource_id.ilike(term)
+            | Finding.check_id.ilike(term)
+            | Finding.service.ilike(term)
+        )
 
     triage_map = {
         t.fingerprint: t.state
