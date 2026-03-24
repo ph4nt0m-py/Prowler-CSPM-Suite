@@ -1,4 +1,4 @@
-# Security model
+# Security model (In Pipeline - Most Features are not present in this release)
 
 ## Credentials at rest
 
