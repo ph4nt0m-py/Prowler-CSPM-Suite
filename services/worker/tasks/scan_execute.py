@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+import subprocess
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -13,7 +15,9 @@ from app.models.credential import Credential, CredentialProvider
 from app.models.scan import Scan, ScanStatus
 from app.redis_client import publish_scan_progress
 from app.services.aws_creds import resolve_aws_env_for_credential
-from prowler.runner import ProwlerAwsOptions, run_prowler_aws
+from prowler.runner import ProwlerAwsOptions, _docker_bin, run_prowler_aws
+
+logger = logging.getLogger(__name__)
 
 _LOG_MAX = 512_000
 
@@ -56,6 +60,31 @@ def _fail_running(db: Session, sid: uuid.UUID, message: str) -> None:
     db.commit()
     if n:
         publish_scan_progress(sid, {"pct": 0, "stage": "failed", "status": "failed", "error": message})
+
+
+def _ensure_image(image: str) -> tuple[bool, str]:
+    """Return (ok, message). Pulls the image if not present locally."""
+    try:
+        docker = _docker_bin()
+    except FileNotFoundError as e:
+        return False, str(e)
+
+    inspect = subprocess.run(
+        [docker, "image", "inspect", image],
+        capture_output=True, text=True, timeout=30,
+    )
+    if inspect.returncode == 0:
+        return True, "image already cached"
+
+    logger.info("Pulling Prowler image %s …", image)
+    pull = subprocess.run(
+        [docker, "pull", image],
+        capture_output=True, text=True, timeout=3600,
+    )
+    if pull.returncode != 0:
+        stderr_tail = (pull.stderr or "")[-1000:]
+        return False, f"docker pull failed (rc={pull.returncode}): {stderr_tail}"
+    return True, "pulled"
 
 
 @app.task(name="cloudaudit.execute_scan")
@@ -107,6 +136,18 @@ def execute_scan_task(scan_id: str) -> None:
         if not scan_row or scan_row.status == ScanStatus.cancelled:
             publish_scan_progress(sid, {"pct": 0, "stage": "cancelled", "status": "cancelled"})
             return
+
+        publish_scan_progress(sid, {"pct": 8, "stage": "pulling_image", "status": "running"})
+        db.query(Scan).filter(Scan.id == sid, Scan.status == ScanStatus.running).update(
+            {Scan.progress_pct: 8}, synchronize_session=False,
+        )
+        db.commit()
+
+        img_ok, img_msg = _ensure_image(settings.prowler_image)
+        if not img_ok:
+            _fail_running(db, sid, f"Failed to pull Prowler image: {img_msg}")
+            return
+        logger.info("Prowler image ready: %s (%s)", settings.prowler_image, img_msg)
 
         publish_scan_progress(sid, {"pct": 15, "stage": "running_prowler", "status": "running"})
         db.query(Scan).filter(Scan.id == sid, Scan.status == ScanStatus.running).update(

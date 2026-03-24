@@ -65,7 +65,7 @@ services:
       SCAN_OUTPUT_DIR: /data/scans
       DOCKER_AVAILABLE: "true"
       PROWLER_IMAGE: ${PROWLER_IMAGE:-prowlercloud/prowler:stable}
-      PROWLER_AUTO_PULL: ${PROWLER_AUTO_PULL:-false}
+      PROWLER_AUTO_PULL: ${PROWLER_AUTO_PULL:-true}
     volumes:
       - scan_data:/data/scans
       - /var/run/docker.sock:/var/run/docker.sock
